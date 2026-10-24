@@ -1,0 +1,61 @@
+﻿# Python environments
+.venv/
+venv/
+env/
+
+# Python caches and test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets and local environment settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Model weights and large model artifacts
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.gguf/
+
+# Downloaded datasets and caches
+data/
+datasets/
+.cache/
+huggingface_cache/
+
+# Generated experiment outputs and logs
+outputs/
+wandb/
+mlruns/
+lightning_logs/
+*.log
+
+# Jupyter temporary checkpoints
+.ipynb_checkpoints/
+
+# Editor and operating-system files
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local project archives
+ZIP files/
+
+# Generated Phase 0 experiment artifacts
+phase0/results/
+
+# Historical training backups
+phase0/experiments/*backup*.py
+phase0/experiments/*before*.py
+phase0/experiments/*pretraining*.py
