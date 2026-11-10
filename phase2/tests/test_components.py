@@ -64,11 +64,11 @@ def test_all_manifest_runs_are_assigned_once():
     assignments = partition_manifest_runs(manifest)
     summary = assignment_summary(assignments)
 
-    assert summary["total_runs"] == 45
+    assert summary["total_runs"] == 41
     assert set(assignments) == {
         "kaggle-1", "kaggle-2", "colab-1", "colab-2", "colab-3", "colab-4", "colab-5"
     }
-    assert sum(len(runs) for runs in assignments.values()) == 45
+    assert sum(len(runs) for runs in assignments.values()) == 41
 
 
 def test_stream_loader_rejects_missing_dataset():

@@ -15,12 +15,16 @@ from phase2.protocol import (
 PROTOCOL_PATH = Path(__file__).parents[1] / "configs" / "pilot_protocol.json"
 
 
-def test_frozen_protocol_has_five_distinct_orders_and_45_runs():
+def test_frozen_protocol_has_five_distinct_orders_and_41_runs():
     protocol = load_protocol(PROTOCOL_PATH)
     manifest = build_manifest(protocol)
 
     assert len(protocol["orders"]) == 5
-    assert manifest["expected_run_count"] == 45
+    assert manifest["expected_run_count"] == 41
+    assert sum(run["method_id"] == "B1" for run in manifest["runs"]) == 1
+    assert next(
+        run for run in manifest["runs"] if run["method_id"] == "B1"
+    )["order_id"] == "order-independent"
     assert manifest["runs"][0]["run_id"].startswith(protocol["protocol_id"])
 
 

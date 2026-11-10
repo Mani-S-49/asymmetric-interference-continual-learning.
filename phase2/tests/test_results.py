@@ -90,8 +90,9 @@ def test_aggregation_reports_missing_jobs_and_run_level_statistics(
     report = aggregate_results(manifest, tmp_path)
 
     assert report["complete"] is False
-    assert report["completed_run_count"] == 5
-    assert report["expected_run_count"] == 45
+    assert report["completed_run_count"] == 1
+    assert report["expected_run_count"] == 41
     assert report["methods"]["B1"]["metrics"]["ACC"]["mean"] == pytest.approx(0.5)
-    assert report["methods"]["B1"]["metrics"]["ACC"]["std"] == 0
+    assert report["methods"]["B1"]["metrics"]["ACC"]["std"] is None
+    assert report["methods"]["B1"]["expected_runs"] == 1
     assert len(report["missing_runs"]) == 40

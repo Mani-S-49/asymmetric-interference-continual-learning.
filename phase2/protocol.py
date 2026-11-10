@@ -9,6 +9,8 @@ from pathlib import Path
 import random
 from typing import Any
 
+ORDER_INVARIANT_METHOD_IDS = frozenset({"B1"})
+
 
 def load_protocol(path: str | Path) -> dict[str, Any]:
     """Load and validate a Phase 2 protocol JSON file."""
@@ -150,7 +152,15 @@ def build_manifest(
 
     runs = []
     for method in protocol["methods"]:
-        for order in protocol["orders"]:
+        method_orders = (
+            [{
+                "id": "order-independent",
+                "languages": dataset["languages"],
+            }]
+            if method["id"] in ORDER_INVARIANT_METHOD_IDS
+            else protocol["orders"]
+        )
+        for order in method_orders:
             for training_seed in protocol["training"]["seeds"]:
                 runs.append({
                     "run_id": f"{protocol['protocol_id']}-{method['id']}-"

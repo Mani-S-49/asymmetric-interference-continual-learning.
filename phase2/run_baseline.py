@@ -400,8 +400,11 @@ def _run_b1(
         "method_deviation": (
             "Jointly trains on the pooled fixed training subsets in one epoch; "
             "pooled row order follows the canonical protocol language list "
-            "before seeded shuffling, so B1 is order-invariant."
+            "before seeded shuffling. B1 is evaluated once because joint "
+            "training is independent of stream order."
         ),
+        "order_invariant": True,
+        "order_interpretation": "not_applicable",
     }
     record = make_joint_record(
         manifest=manifest,
@@ -459,10 +462,12 @@ def run_baseline(
     run_manifest = build_manifest(protocol)
     run_manifest["data_artifacts"] = prepared_manifest["data_artifacts"]
     run_manifest["data_manifest_sha256"] = prepared_manifest["data_manifest_sha256"]
-    selected_orders = list(order_ids) if order_ids is not None else [
-        order["id"] for order in protocol["orders"]
-    ]
-    available_orders = {order["id"] for order in protocol["orders"]}
+    available_orders = {
+        run["order_id"]
+        for run in run_manifest["runs"]
+        if run["method_id"] == method_id
+    }
+    selected_orders = list(order_ids) if order_ids is not None else sorted(available_orders)
     if not selected_orders or len(set(selected_orders)) != len(selected_orders):
         raise ValueError("Select one or more distinct order IDs.")
     unknown_orders = sorted(set(selected_orders) - available_orders)

@@ -23,6 +23,7 @@ METHOD_METADATA = {
         "name": "sequential_no_replay",
         "runtime": "kaggle-1",
         "status": "implemented_reference_runner",
+        "order_invariant": True,
     },
     "B1": {
         "id": "B1",

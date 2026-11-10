@@ -10,7 +10,7 @@ Setup assets include a frozen protocol, deterministic data/manifest tooling, a s
 
 ## Objective
 
-Implement and compare B0-B8 from `research_plan.md` on the five-language XNLI pilot stream: English, Hindi, Spanish, German, and Swahili. Report average accuracy, BWT, FWT, forgetting, and per-language accuracy after every stage. The Phase 2 checkpoint requires mean and standard deviation over five fixed stream-order permutations.
+Implement and compare B0-B8 from `research_plan.md` on the five-language XNLI pilot stream: English, Hindi, Spanish, German, and Swahili. Report average accuracy, BWT, FWT, forgetting, and per-language accuracy after every stage. Order-sensitive methods require five fixed stream-order permutations; B1 is order-invariant and is run once, so its across-order standard deviation is not applicable.
 
 The official `facebook/xnli` dataset does not provide a Bengali config, so the runnable pilot uses `es` instead of `bn` while preserving the same evaluation structure and replay protocol.
 
@@ -21,7 +21,7 @@ Record this protocol in the Kaggle notebook and in each run's metadata before co
 - Dataset: `facebook/xnli`; use the official train and test splits. Never use test results for model or hyperparameter selection.
 - Languages: `en`, `hi`, `es`, `de`, `sw`.
 - Pilot scale: 500 training and 200 test examples per language, matching the existing Phase 1 pilot scale. Reuse identical selected examples across methods and orders; keep test selection fixed.
-- Orders: create and save five distinct permutations once, then reuse the exact same orders for every method. Include the canonical order `en -> hi -> es -> de -> sw` among the five.
+- Orders: create and save five distinct permutations once, then reuse the exact same orders for every order-sensitive method. Include the canonical order `en -> hi -> es -> de -> sw` among the five. B1 joint training uses one order-independent manifest entry.
 - Model: `meta-llama/Llama-3.2-1B` with the same prompt and label-likelihood evaluator as Phase 1.
 - LoRA: use the research-plan configuration for Phase 2: rank 16, alpha 32, target modules `q_proj`, `k_proj`, `v_proj`, `o_proj`. Keep optimizer, epochs, batch size, max length, precision, and data exposure identical across comparable methods, and record the actual values.
 - Replay capacity: the plan does not specify a Phase 2 buffer percentage. Proposed default: 5% of the total pilot training set (125 examples), fixed across replay methods. Confirm this value in the run manifest before full runs; do not change it mid-comparison.
@@ -83,9 +83,9 @@ Each part is a separate notebook session or saved notebook version. Persist inpu
 ### Part 2: Reference baselines
 
 - Run B0 sequential no-replay from `phase2/notebooks/phase2_b0_kaggle.ipynb` and B1 joint multilingual fine-tuning from `phase2/notebooks/phase2_b1_kaggle.ipynb`.
-- Both notebooks use `phase2/run_baseline.py`, the frozen manifest/data artifacts, the Phase 1 candidate-label prompt/evaluator, and the Phase 2 LoRA settings. They can run one order or all five; completed result records are validated and skipped on rerun.
+- Both notebooks use `phase2/run_baseline.py`, the frozen manifest/data artifacts, the Phase 1 candidate-label prompt/evaluator, and the Phase 2 LoRA settings. B0 runs one or all five orders; B1 runs its single order-independent job. Completed result records are validated and skipped on rerun.
 - B0 saves adapters after each language stage and writes a full stage-by-language evaluation matrix. B1 trains on the same pooled fixed training subsets and records final per-language accuracy; sequential-only transfer/forgetting metrics are intentionally undefined for B1.
-- B1 is intentionally order-invariant: its five manifest jobs use the same canonical pooled-data order and seed. Those order-indexed records are duplicate controls, not five independent trials; interpret its cross-order standard deviation accordingly.
+- B1 is intentionally order-invariant and has one `order-independent` manifest job. Its metrics have one run-level value, so standard deviation is unavailable; repeated identical trainings are not counted as independent trials.
 - Result records include a checksum of the prepared data manifest. Compare this hash across notebook outputs before aggregation to confirm that the notebooks used identical selected examples.
 - The notebooks clone/update the pushed GitHub revision. Add `HF_TOKEN` as a Kaggle secret; W&B logging is optional.
 - The repository is public, so its Kaggle notebooks do not need a GitHub token/API key for cloning. `HF_TOKEN` is a separate secret for gated model access. If the repository visibility changes to private, add a read-only GitHub token via Kaggle Secrets and use authenticated clone configuration rather than putting credentials in a URL.
@@ -114,15 +114,15 @@ Each part is a separate notebook session or saved notebook version. Persist inpu
 - Run every implemented baseline on one fixed order with reduced examples as a pipeline smoke test.
 - Confirm metrics, logs, checkpoints, and restart/resume work. Smoke results are not Phase 2 results and must not be used to tune against the test split.
 
-### Part 7: Full five-order runs
+### Part 7: Full scheduled runs
 
-- Run method/order jobs in parallel across the assigned Kaggle and Colab runtimes, within each provider's current session limits.
+- Run all five orders for order-sensitive methods across the assigned Kaggle and Colab runtimes, within each provider's current session limits. Run the single order-independent B1 job once.
 - Write a result file atomically after each completed language stage and keep the run manifest beside it.
 - Save completed outputs as a Kaggle notebook version/output dataset before ending the session. Resume only missing method/order jobs; never overwrite completed runs.
 
 ### Part 8: Aggregate and checkpoint
 
-- Validate that every required method has results for the same five orders and comparable seeds/settings.
+- Validate that every order-sensitive method has results for the same five orders and comparable seeds/settings; validate B1 as one order-independent result.
 - Produce a table with per-order values and mean +/- standard deviation for ACC, BWT, FWT, and forgetting, plus per-language accuracy matrices.
 - Report incomplete or adapted baselines explicitly. Do not claim the Phase 2 checkpoint is complete until the full required baseline table is available.
 

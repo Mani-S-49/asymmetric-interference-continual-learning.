@@ -122,7 +122,7 @@ def test_validate_prepared_artifacts_checks_manifest_and_hash(
 
     manifest = validate_prepared_artifacts(protocol, artifact_root)
 
-    assert manifest["expected_run_count"] == 45
+    assert manifest["expected_run_count"] == 41
     artifact = artifact_root / "data" / "en.train.jsonl"
     artifact.write_text(artifact.read_text(encoding="utf-8") + "\n", encoding="utf-8")
     with pytest.raises(ValueError, match="Checksum mismatch"):
@@ -138,7 +138,7 @@ def test_run_baseline_skips_a_valid_completed_run_without_gpu(
         manifest["data_manifest_sha256"] = json.load(source)["data_manifest_sha256"]
     run = next(
         item for item in manifest["runs"]
-        if item["method_id"] == "B1" and item["order_id"] == "order-1"
+        if item["method_id"] == "B1" and item["order_id"] == "order-independent"
     )
     result = make_joint_record(
         manifest=manifest,
@@ -153,7 +153,7 @@ def test_run_baseline_skips_a_valid_completed_run_without_gpu(
         method_id="B1",
         protocol_path=protocol_path,
         artifact_root=artifact_root,
-        order_ids=["order-1"],
+        order_ids=["order-independent"],
     )
 
     assert len(completed) == 1
@@ -221,20 +221,17 @@ def test_b0_runner_writes_complete_sequential_matrix(monkeypatch, tmp_path):
     assert (tmp_path / "results" / f"{run['run_id']}.json").is_file()
 
 
-def test_b1_runner_uses_canonical_order_for_order_invariant_pool(monkeypatch, tmp_path):
+def test_b1_runner_trains_once_for_order_invariant_pool(monkeypatch, tmp_path):
     import transformers
     from datasets import Dataset
 
     monkeypatch.setattr(transformers, "set_seed", lambda seed: None)
     protocol = load_protocol(PROTOCOL_PATH)
     manifest = build_manifest(protocol)
-    runs = [
-        next(
-            item for item in manifest["runs"]
-            if item["method_id"] == "B1" and item["order_id"] == order_id
-        )
-        for order_id in ("order-1", "order-2")
-    ]
+    run = next(
+        item for item in manifest["runs"]
+        if item["method_id"] == "B1"
+    )
     train_sets = {
         language: Dataset.from_list([
             {"prompt": f"{language} example {index}", "target": " entailment"}
@@ -256,24 +253,23 @@ def test_b1_runner_uses_canonical_order_for_order_invariant_pool(monkeypatch, tm
     def trainer_factory(protocol, seed, checkpoint_dir, token):
         return CapturingTrainer()
 
-    for run in runs:
-        _run_b1(
-            protocol,
-            manifest,
-            run,
-            train_sets,
-            test_sets,
-            tmp_path,
-            "test-token",
-            trainer_factory,
-            _fake_evaluator,
-            None,
-            None,
-        )
-
-    assert pooled_orders[0] == pooled_orders[1]
-    assert len(pooled_orders[0]) == 10
-    assert all(
-        (tmp_path / "results" / f"{run['run_id']}.json").is_file()
-        for run in runs
+    record = _run_b1(
+        protocol,
+        manifest,
+        run,
+        train_sets,
+        test_sets,
+        tmp_path,
+        "test-token",
+        trainer_factory,
+        _fake_evaluator,
+        None,
+        None,
     )
+
+    assert run["order_id"] == "order-independent"
+    assert record["metadata"]["order_invariant"] is True
+    assert record["metadata"]["order_interpretation"] == "not_applicable"
+    assert len(pooled_orders[0]) == 10
+    assert len(pooled_orders) == 1
+    assert (tmp_path / "results" / f"{run['run_id']}.json").is_file()
