@@ -87,7 +87,8 @@ Each part is a separate notebook session or saved notebook version. Persist inpu
 - B0 saves adapters after each language stage and writes a full stage-by-language evaluation matrix. B1 trains on the same pooled fixed training subsets and records final per-language accuracy; sequential-only transfer/forgetting metrics are intentionally undefined for B1.
 - B1 is intentionally order-invariant: its five manifest jobs use the same canonical pooled-data order and seed. Those order-indexed records are duplicate controls, not five independent trials; interpret its cross-order standard deviation accordingly.
 - Result records include a checksum of the prepared data manifest. Compare this hash across notebook outputs before aggregation to confirm that the notebooks used identical selected examples.
-- Push the updated repository to the GitHub revision referenced by the notebooks before cloning it in Kaggle. Add `HF_TOKEN` as a Kaggle secret; W&B logging is optional.
+- The notebooks clone/update the pushed GitHub revision. Add `HF_TOKEN` as a Kaggle secret; W&B logging is optional.
+- The repository is private. Each Kaggle account that runs a notebook must have a `GH_TOKEN` Kaggle secret with read-only access to the private repository (fine-grained token: **Contents: Read-only**). `HF_TOKEN` is a separate secret for gated model access. The notebooks pass GitHub authorization only to the Git subprocess and never place credentials in the clone URL or notebook output.
 - Implement B6 LR-ADJUST from its source description, recording its exact schedule.
 - Unit-test order, stage boundaries, evaluation matrix shape, seeds, and output writing with a tiny model/data smoke test.
 
