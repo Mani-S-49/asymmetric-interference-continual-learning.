@@ -36,7 +36,7 @@ Current Phase 2 comparison target: five languages (`en`, `hi`, `es`, `de`, `sw`)
 | **B1 — joint multilingual training** | One completed, current-protocol run: ACC 0.623; adapter, fixed data, result, and matching manifest are saved together. | Complete for B1's order-invariant single-run protocol. Do not mix with the older order-1 B1 record (ACC 0.671). |
 | **B2 — Uniform Experience Replay** | Runner and clean Kaggle notebook are available; no B2 result archive is present in this local project. | Run/collect all five orders and validate artifacts before aggregation. |
 | **B3 — DER++** | Runnable causal-LM adaptation and Kaggle notebook are available; no B3 result archive is present locally. | Run all five orders. This is a documented candidate-label-logit adaptation, not full-vocabulary DER++. |
-| **B4 — GCR** | Runnable local gradient-herding adapter and Colab notebook are available; no B4 result archive is present. | Run all five orders. This is a documented GCR-style adaptation, not an exact paper reproduction; it adds 2,500 per-example gradient passes/order and uses 1:1 replay. |
+| **B4 — GCR** | Runnable gradient-herding adapter and Kaggle notebook are available; no B4 result archive is present. | Run all five orders, preferably across saved Kaggle sessions. This is a documented GCR-style adaptation, not an exact paper reproduction; it adds 2,500 per-example gradient passes/order and uses 1:1 replay. |
 | **B5–B8** | Planning/setup is documented, but method implementations/results are not a complete comparable set. | Still outstanding; see [Phase 2 plan](./phase2/README.md). |
 
 For B2, the implemented policy samples uniformly from a stagewise reservoir containing only previously seen languages. Before each later stage it draws one replay example (with replacement) per current example; the current stage is added to the reservoir afterward. The first stage has no replay. The 125-example capacity and 1:1 replay ratio are protocol choices, and replay means B2 sees more total training-example exposures than B0.
@@ -60,4 +60,4 @@ The root [Phase 2 README](./phase2/README.md) contains protocol details and arti
 - [B0-B4 runner](./phase2/run_baseline.py)
 - [Executed B0 Kaggle notebook](./phase2/notebooks/phase2_b0_kaggle_executed.ipynb)
 - [B2 Kaggle notebook](./phase2/notebooks/phase2_b2_kaggle.ipynb)
-- [B4 Colab notebook](./phase2/notebooks/phase2_b4_colab.ipynb)
+- [B4 Kaggle notebook](./phase2/notebooks/phase2_b4_kaggle.ipynb)
