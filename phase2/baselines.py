@@ -35,7 +35,7 @@ METHOD_METADATA = {
         "id": "B2",
         "name": "uniform_experience_replay",
         "runtime": "kaggle-2",
-        "status": "buffer_ready_runner_required",
+        "status": "implemented_reference_runner",
     },
     "B3": {
         "id": "B3",

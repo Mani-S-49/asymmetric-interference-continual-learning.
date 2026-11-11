@@ -11,7 +11,9 @@ from phase2.results import (
     write_result_record,
 )
 from phase2.run_baseline import (
+    _prepare_b2_stage_datasets,
     _run_b0,
+    _run_b2,
     _run_b1,
     format_xnli_row,
     run_baseline,
@@ -221,6 +223,96 @@ def test_b0_runner_writes_complete_sequential_matrix(monkeypatch, tmp_path):
     assert (tmp_path / "results" / f"{run['run_id']}.json").is_file()
 
 
+def test_b2_stage_datasets_replay_only_past_languages():
+    from datasets import Dataset
+
+    protocol = load_protocol(PROTOCOL_PATH)
+    task_order = protocol["orders"][0]["languages"]
+    train_sets = {
+        language: Dataset.from_list([
+            {"prompt": f"{language} example {index}", "target": " entailment"}
+            for index in range(4)
+        ])
+        for language in task_order
+    }
+
+    stage_sets, stages = _prepare_b2_stage_datasets(
+        task_order,
+        train_sets,
+        capacity=1,
+        replay_seed=17,
+        training_seed=42,
+    )
+
+    assert [len(stage_sets[language]) for language in task_order] == [4, 8, 8, 8, 8]
+    assert [stage["replay_examples"] for stage in stages] == [0, 4, 4, 4, 4]
+    assert all(stage["buffer_size_after_stage"] == 1 for stage in stages)
+    for stage_index, stage in enumerate(stages):
+        assert set(stage["replay_examples_by_language"]) <= set(task_order[:stage_index])
+
+
+def test_b2_runner_writes_matrix_and_replay_metadata(monkeypatch, tmp_path):
+    import transformers
+    from datasets import Dataset
+
+    monkeypatch.setattr(transformers, "set_seed", lambda seed: None)
+    protocol = load_protocol(PROTOCOL_PATH)
+    protocol["dataset"]["train_examples_per_language"] = 4
+    protocol["dataset"]["test_examples_per_language"] = 2
+    protocol["replay"]["buffer_capacity_examples"] = 1
+    manifest = build_manifest(protocol)
+    run = next(
+        item for item in manifest["runs"]
+        if item["method_id"] == "B2" and item["order_id"] == "order-1"
+    )
+    train_sets = {
+        language: Dataset.from_list([
+            {"prompt": f"{language} example {index}", "target": " entailment"}
+            for index in range(4)
+        ])
+        for language in protocol["dataset"]["languages"]
+    }
+    test_sets = {
+        language: [{"label": 0}, {"label": 1}]
+        for language in protocol["dataset"]["languages"]
+    }
+    stage_lengths = []
+
+    def trainer_factory(protocol, seed, checkpoint_dir, token):
+        class RecordingTrainer(_FakeTrainer):
+            def train_stage(self, dataset, stage_name):
+                stage_lengths.append(len(dataset))
+                return super().train_stage(dataset, stage_name)
+        return RecordingTrainer()
+
+    record = _run_b2(
+        protocol,
+        manifest,
+        run,
+        train_sets,
+        test_sets,
+        tmp_path,
+        "test-token",
+        trainer_factory,
+        _fake_evaluator,
+        None,
+        None,
+    )
+
+    metadata = record["metadata"]
+    assert record["evaluation_mode"] == "sequential"
+    assert len(record["performance_matrix"]) == 5
+    assert all(len(row) == 5 for row in record["performance_matrix"])
+    assert metadata["replay_policy"] == "stagewise_uniform_reservoir"
+    assert metadata["replay_examples_per_current_example"] == 1
+    assert metadata["replay_seed"] == protocol["replay"]["seed"]
+    assert [stage["replay_examples"] for stage in metadata["replay_stages"]] == [
+        0, 4, 4, 4, 4
+    ]
+    assert stage_lengths == [4, 8, 8, 8, 8]
+    assert (tmp_path / "results" / f"{run['run_id']}.json").is_file()
+
+
 def test_b1_runner_trains_once_for_order_invariant_pool(monkeypatch, tmp_path):
     import transformers
     from datasets import Dataset
@@ -244,6 +336,11 @@ def test_b1_runner_trains_once_for_order_invariant_pool(monkeypatch, tmp_path):
         for language in protocol["dataset"]["languages"]
     }
     pooled_orders = []
+    checkpoint_dirs = []
+    stale_checkpoint = tmp_path / "checkpoints" / run["run_id"]
+    stale_checkpoint.mkdir(parents=True)
+    stale_marker = stale_checkpoint / "previous-attempt.txt"
+    stale_marker.write_text("preserve", encoding="utf-8")
 
     class CapturingTrainer(_FakeTrainer):
         def train_stage(self, dataset, stage_name):
@@ -251,6 +348,7 @@ def test_b1_runner_trains_once_for_order_invariant_pool(monkeypatch, tmp_path):
             return super().train_stage(dataset, stage_name)
 
     def trainer_factory(protocol, seed, checkpoint_dir, token):
+        checkpoint_dirs.append(checkpoint_dir)
         return CapturingTrainer()
 
     record = _run_b1(
@@ -272,4 +370,8 @@ def test_b1_runner_trains_once_for_order_invariant_pool(monkeypatch, tmp_path):
     assert record["metadata"]["order_interpretation"] == "not_applicable"
     assert len(pooled_orders[0]) == 10
     assert len(pooled_orders) == 1
+    assert checkpoint_dirs == [
+        tmp_path / "checkpoints" / f"{run['run_id']}-attempt-2"
+    ]
+    assert stale_marker.read_text(encoding="utf-8") == "preserve"
     assert (tmp_path / "results" / f"{run['run_id']}.json").is_file()

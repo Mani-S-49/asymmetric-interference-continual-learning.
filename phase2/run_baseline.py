@@ -1,4 +1,4 @@
-"""Run the Phase 2 B0 or B1 XNLI baseline jobs."""
+"""Run the Phase 2 B0, B1, or B2 XNLI baseline jobs."""
 
 from __future__ import annotations
 
@@ -34,6 +34,8 @@ XNLI_LABELS = {
 
 TrainerFactory = Callable[[Mapping[str, Any], int, Path, str | bool], Any]
 AccuracyEvaluator = Callable[[Any, Any, Any, str], float]
+B2_REPLAY_POLICY = "stagewise_uniform_reservoir"
+B2_REPLAY_RATIO = 1
 
 
 def format_xnli_row(example: Mapping[str, Any]) -> dict[str, str]:
@@ -248,6 +250,114 @@ def _expected_run(
     return matches[0]
 
 
+def _create_checkpoint_attempt(output_root: Path, run_id: str) -> Path:
+    """Reserve a fresh checkpoint directory without overwriting failed attempts."""
+    checkpoint_root = output_root / "checkpoints"
+    checkpoint_root.mkdir(parents=True, exist_ok=True)
+    base_dir = checkpoint_root / run_id
+    attempt = 1
+    while True:
+        candidate = (
+            base_dir
+            if attempt == 1
+            else checkpoint_root / f"{run_id}-attempt-{attempt}"
+        )
+        try:
+            candidate.mkdir(exist_ok=False)
+        except FileExistsError:
+            attempt += 1
+            continue
+        if attempt > 1:
+            print(
+                f"Preserving previous incomplete checkpoint(s); "
+                f"using fresh attempt directory {candidate}."
+            )
+        return candidate
+
+
+def _create_sequential_attempt(
+    output_root: Path,
+    run_id: str,
+) -> tuple[Path, Path]:
+    """Reserve matching checkpoint and ledger paths for a sequential attempt."""
+    checkpoint_root = output_root / "checkpoints"
+    ledger_root = output_root / "ledgers"
+    checkpoint_root.mkdir(parents=True, exist_ok=True)
+    ledger_root.mkdir(parents=True, exist_ok=True)
+    attempt = 1
+    while True:
+        attempt_id = run_id if attempt == 1 else f"{run_id}-attempt-{attempt}"
+        checkpoint_dir = checkpoint_root / attempt_id
+        ledger_dir = ledger_root / attempt_id
+        if checkpoint_dir.exists() or ledger_dir.exists():
+            attempt += 1
+            continue
+        checkpoint_dir.mkdir(exist_ok=False)
+        if attempt > 1:
+            print(
+                "Preserving previous incomplete B2 outputs; "
+                f"using fresh attempt {attempt_id}."
+            )
+        return checkpoint_dir, ledger_dir
+
+
+def _prepare_b2_stage_datasets(
+    task_order: Sequence[str],
+    train_sets: Mapping[str, Any],
+    *,
+    capacity: int,
+    replay_seed: int,
+    training_seed: int,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Build stagewise 1:1 replay datasets using only previously seen languages."""
+    from datasets import Dataset
+    from shared.continual_learning_lora import ReplayBuffer
+
+    replay_buffer = ReplayBuffer(capacity, seed=replay_seed)
+    stage_train_sets = {}
+    stage_metadata = []
+    for stage_index, language in enumerate(task_order):
+        current_examples = [dict(example) for example in train_sets[language]]
+        if not current_examples:
+            raise ValueError(f"Training data for {language!r} cannot be empty.")
+
+        replay_examples = (
+            replay_buffer.sample_with_replacement(
+                len(current_examples) * B2_REPLAY_RATIO
+            )
+            if len(replay_buffer)
+            else []
+        )
+        replay_language_counts: dict[str, int] = {}
+        for item in replay_examples:
+            if item.language not in task_order[:stage_index]:
+                raise RuntimeError(
+                    f"B2 replay sampled unseen language {item.language!r} "
+                    f"before stage {language!r}."
+                )
+            replay_language_counts[item.language] = (
+                replay_language_counts.get(item.language, 0) + 1
+            )
+
+        combined_examples = current_examples + [
+            dict(item.example) for item in replay_examples
+        ]
+        stage_train_sets[language] = Dataset.from_list(combined_examples).shuffle(
+            seed=training_seed + stage_index
+        )
+        replay_buffer.extend(language, current_examples)
+        stage_metadata.append({
+            "stage_index": stage_index,
+            "language": language,
+            "current_examples": len(current_examples),
+            "replay_examples": len(replay_examples),
+            "training_examples": len(combined_examples),
+            "replay_examples_by_language": replay_language_counts,
+            "buffer_size_after_stage": len(replay_buffer),
+        })
+    return stage_train_sets, stage_metadata
+
+
 def _run_b0(
     protocol: Mapping[str, Any],
     manifest: Mapping[str, Any],
@@ -335,6 +445,113 @@ def _run_b0(
     return record
 
 
+def _run_b2(
+    protocol: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+    run: Mapping[str, Any],
+    train_sets: Mapping[str, Any],
+    test_sets: Mapping[str, Any],
+    output_root: Path,
+    token: str | bool,
+    trainer_factory: TrainerFactory,
+    evaluator: AccuracyEvaluator | None,
+    wandb_project: str | None,
+    wandb_entity: str | None,
+) -> dict[str, Any]:
+    import gc
+    import torch
+    from shared.continual_learning_lora import run_sequential_experiment
+
+    results_dir = output_root / "results"
+    result_path = results_dir / f"{run['run_id']}.json"
+    if result_path.exists():
+        with result_path.open(encoding="utf-8") as source:
+            existing = json.load(source)
+        validate_result_record(existing, manifest)
+        print(f"Already completed; skipping {run['run_id']}.")
+        return existing
+
+    checkpoint_dir, ledger_dir = _create_sequential_attempt(
+        output_root, run["run_id"]
+    )
+    from transformers import set_seed
+
+    seed = run["training_seed"]
+    replay_config = protocol["replay"]
+    replay_seed = replay_config["seed"]
+    set_seed(seed)
+    stage_train_sets, replay_stages = _prepare_b2_stage_datasets(
+        run["task_order"],
+        train_sets,
+        capacity=replay_config["buffer_capacity_examples"],
+        replay_seed=replay_seed,
+        training_seed=seed,
+    )
+    trainer = trainer_factory(protocol, seed, checkpoint_dir, token)
+    trainer.load_model_and_tokenizer()
+    run_metadata = {
+        **_runtime_metadata(protocol, "B2"),
+        "protocol_sha256": manifest["protocol_sha256"],
+        "order_id": run["order_id"],
+        "task_order": list(run["task_order"]),
+        "training_seed": seed,
+        "replay_seed": replay_seed,
+        "replay_policy": B2_REPLAY_POLICY,
+        "replay_buffer_capacity_examples": replay_config[
+            "buffer_capacity_examples"
+        ],
+        "replay_examples_per_current_example": B2_REPLAY_RATIO,
+        "replay_update_timing": "after_each_language_stage",
+        "replay_stages": replay_stages,
+        "checkpoint_attempt": checkpoint_dir.name,
+        "method_deviation": (
+            "Stagewise uniform experience replay adaptation: before each "
+            "language stage, sample one replay example with replacement per "
+            "current example from a uniform reservoir containing only prior "
+            "languages; append the current stage to the reservoir after "
+            "training data for that stage is formed. The first stage has no "
+            "replay. Replay increases training-example exposure relative to B0."
+        ),
+    }
+    kwargs: dict[str, Any] = {}
+    if evaluator is not None:
+        kwargs["evaluator"] = evaluator
+    if wandb_project:
+        kwargs["wandb_project"] = wandb_project
+        kwargs["wandb_entity"] = wandb_entity
+    result = run_sequential_experiment(
+        trainer,
+        task_order=run["task_order"],
+        train_datasets=stage_train_sets,
+        test_datasets=test_sets,
+        experiment_id=run["run_id"],
+        output_dir=ledger_dir,
+        dataset_name=protocol["dataset"]["id"],
+        task_name="xnli",
+        run_metadata=run_metadata,
+        **kwargs,
+    )
+    matrix = result["ledger"].performance_matrix()
+    zero_shot = result["ledger"].baseline_accuracies()
+    if any(value is None for row in matrix for value in row) or any(
+        value is None for value in zero_shot
+    ):
+        raise RuntimeError("B2 sequential experiment returned incomplete evaluations.")
+    record = make_sequential_record(
+        manifest=manifest,
+        run=run,
+        performance_matrix=matrix,
+        zero_shot_accuracy=zero_shot,
+        metadata=run_metadata,
+    )
+    write_result_record(record, results_dir, manifest)
+    del trainer
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    return record
+
+
 def _run_b1(
     protocol: Mapping[str, Any],
     manifest: Mapping[str, Any],
@@ -362,12 +579,7 @@ def _run_b1(
         print(f"Already completed; skipping {run['run_id']}.")
         return existing
 
-    checkpoint_dir = output_root / "checkpoints" / run["run_id"]
-    if checkpoint_dir.exists():
-        raise FileExistsError(
-            f"Found incomplete outputs for {run['run_id']}; choose a fresh "
-            "artifact root or manually inspect the existing outputs."
-        )
+    checkpoint_dir = _create_checkpoint_attempt(output_root, run["run_id"])
 
     from transformers import set_seed
 
@@ -454,9 +666,9 @@ def run_baseline(
     trainer_factory: TrainerFactory | None = None,
     evaluator: AccuracyEvaluator | None = None,
 ) -> list[dict[str, Any]]:
-    """Run selected B0/B1 stream orders using the prepared fixed XNLI data."""
-    if method_id not in {"B0", "B1"}:
-        raise ValueError("Only B0 and B1 training adapters are implemented.")
+    """Run selected B0/B1/B2 jobs using prepared fixed XNLI data."""
+    if method_id not in {"B0", "B1", "B2"}:
+        raise ValueError("Only B0, B1, and B2 training adapters are implemented.")
     protocol = load_protocol(protocol_path)
     prepared_manifest = validate_prepared_artifacts(protocol, artifact_root)
     run_manifest = build_manifest(protocol)
@@ -521,8 +733,22 @@ def run_baseline(
                 wandb_project,
                 wandb_entity,
             )
-        else:
+        elif method_id == "B1":
             result = _run_b1(
+                protocol,
+                run_manifest,
+                run,
+                train_sets,
+                test_sets,
+                output_root,
+                token,
+                factory,
+                evaluator,
+                wandb_project,
+                wandb_entity,
+            )
+        else:
+            result = _run_b2(
                 protocol,
                 run_manifest,
                 run,
@@ -546,7 +772,7 @@ def run_baseline(
 def main() -> None:
     default_protocol = Path(__file__).parent / "configs" / "pilot_protocol.json"
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--method", choices=("B0", "B1"), required=True)
+    parser.add_argument("--method", choices=("B0", "B1", "B2"), required=True)
     parser.add_argument("--protocol", type=Path, default=default_protocol)
     parser.add_argument("--artifact-root", type=Path, required=True)
     parser.add_argument(

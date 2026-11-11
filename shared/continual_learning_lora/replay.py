@@ -68,5 +68,15 @@ class ReplayBuffer:
             raise ValueError("batch_size cannot exceed the current buffer size.")
         return self._random.sample(self._items, batch_size)
 
+    def sample_with_replacement(self, batch_size: int) -> list[ReplayItem]:
+        """Sample examples uniformly with replacement for replay batches."""
+        if isinstance(batch_size, bool) or not isinstance(batch_size, int):
+            raise TypeError("batch_size must be an integer.")
+        if batch_size <= 0:
+            raise ValueError("batch_size must be positive.")
+        if not self._items:
+            raise ValueError("Cannot sample from an empty replay buffer.")
+        return [self._random.choice(self._items) for _ in range(batch_size)]
+
     def __len__(self) -> int:
         return len(self._items)
