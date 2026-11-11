@@ -132,40 +132,35 @@ class GradientCoresetSelector:
         gradient_vectors: Sequence[Sequence[float]],
         count: int,
     ) -> list[T]:
+        import numpy as np
+
         _validate_count(count, len(items))
         if len(gradient_vectors) != len(items) or not gradient_vectors:
             raise ValueError("Provide one gradient vector per item.")
-        dimension = len(gradient_vectors[0])
-        if dimension == 0 or any(len(vector) != dimension for vector in gradient_vectors):
-            raise ValueError("Gradient vectors must have equal, non-zero dimensions.")
+        vectors = np.asarray(gradient_vectors, dtype=np.float64)
+        if (
+            vectors.ndim != 2
+            or vectors.shape[1] == 0
+            or not np.isfinite(vectors).all()
+        ):
+            raise ValueError(
+                "Gradient vectors must have equal, finite, non-zero dimensions."
+            )
 
-        target = [
-            sum(float(vector[column]) for vector in gradient_vectors) / len(gradient_vectors)
-            for column in range(dimension)
-        ]
+        target = vectors.mean(axis=0)
         selected_indices = []
-        remaining = set(range(len(items)))
-        running_sum = [0.0] * dimension
+        remaining = np.ones(len(items), dtype=bool)
+        running_sum = np.zeros(vectors.shape[1], dtype=np.float64)
         for selected_count in range(count):
-            best_index = None
-            best_distance = math.inf
-            for index in sorted(remaining):
-                candidate_mean = [
-                    (running_sum[column] + float(gradient_vectors[index][column]))
-                    / (selected_count + 1)
-                    for column in range(dimension)
-                ]
-                distance = sum(
-                    (candidate_mean[column] - target[column]) ** 2
-                    for column in range(dimension)
-                )
-                if distance < best_distance:
-                    best_distance = distance
-                    best_index = index
+            candidate_indices = np.flatnonzero(remaining)
+            candidate_means = (
+                running_sum[None, :] + vectors[candidate_indices]
+            ) / (selected_count + 1)
+            squared_distances = np.square(candidate_means - target).sum(axis=1)
+            best_index = int(candidate_indices[int(np.argmin(squared_distances))])
             selected_indices.append(best_index)
-            remaining.remove(best_index)
-            for column in range(dimension):
-                running_sum[column] += float(gradient_vectors[best_index][column])
+            remaining[best_index] = False
+            running_sum += vectors[best_index]
         return [items[index] for index in selected_indices]
 
 

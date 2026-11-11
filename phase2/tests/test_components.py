@@ -48,6 +48,11 @@ def test_gradient_coreset_selector_herds_toward_mean():
     assert GradientCoresetSelector.select(items, vectors, 1) == ["middle"]
 
 
+def test_gradient_coreset_selector_rejects_nonfinite_vectors():
+    with pytest.raises(ValueError, match="finite"):
+        GradientCoresetSelector.select(["candidate"], [[float("nan")]], 1)
+
+
 def test_prior_selector_ranks_by_prior_score():
     items = ["english", "hindi", "swahili"]
     languages = ["en", "hi", "sw"]

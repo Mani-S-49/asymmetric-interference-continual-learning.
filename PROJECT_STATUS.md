@@ -8,7 +8,7 @@
 | Workstream | Status | What is established |
 |---|---|---|
 | Phase 1: harness and pilot evidence | Complete for project progression; target checkpoint pattern not reproduced | The English → Hindi → German pilot and the Hindi → German → English three-seed follow-up are saved. The follow-up has validated results for seeds 42, 43, and 44, with a 0/3 pass rate for the predefined pattern. |
-| Phase 2: B0–B8 baselines | In progress | B0 is complete for all five current-protocol orders and validated. One current-protocol B1 run is saved. B2 has no result archive in this local project. B3 has a runnable DER++ adaptation and Kaggle notebook, but no local result archive; B4–B8 are outstanding. |
+| Phase 2: B0–B8 baselines | In progress | B0 is complete for all five current-protocol orders and validated. One current-protocol B1 run is saved. B2–B4 have runnable local runners/notebooks but no local result archives; B5–B8 remain outstanding. |
 | Later research phases | Not yet at their Phase 2 entry checkpoint | Start the prior-comparison and proposed-method work only after the required baseline results are collected and reviewed. |
 
 Phase 1 being accepted for project progression is **not** a claim that the original checkpoint pattern was reproduced.
@@ -36,7 +36,8 @@ Current Phase 2 comparison target: five languages (`en`, `hi`, `es`, `de`, `sw`)
 | **B1 — joint multilingual training** | One completed, current-protocol run: ACC 0.623; adapter, fixed data, result, and matching manifest are saved together. | Complete for B1's order-invariant single-run protocol. Do not mix with the older order-1 B1 record (ACC 0.671). |
 | **B2 — Uniform Experience Replay** | Runner and clean Kaggle notebook are available; no B2 result archive is present in this local project. | Run/collect all five orders and validate artifacts before aggregation. |
 | **B3 — DER++** | Runnable causal-LM adaptation and Kaggle notebook are available; no B3 result archive is present locally. | Run all five orders. This is a documented candidate-label-logit adaptation, not full-vocabulary DER++. |
-| **B4–B8** | Planning/setup is documented, but method implementations/results are not a complete comparable set. | Still outstanding; see [Phase 2 plan](./phase2/README.md). |
+| **B4 — GCR** | Runnable local gradient-herding adapter and Colab notebook are available; no B4 result archive is present. | Run all five orders. This is a documented GCR-style adaptation, not an exact paper reproduction; it adds 2,500 per-example gradient passes/order and uses 1:1 replay. |
+| **B5–B8** | Planning/setup is documented, but method implementations/results are not a complete comparable set. | Still outstanding; see [Phase 2 plan](./phase2/README.md). |
 
 For B2, the implemented policy samples uniformly from a stagewise reservoir containing only previously seen languages. Before each later stage it draws one replay example (with replacement) per current example; the current stage is added to the reservoir afterward. The first stage has no replay. The 125-example capacity and 1:1 replay ratio are protocol choices, and replay means B2 sees more total training-example exposures than B0.
 
@@ -46,8 +47,9 @@ The root [Phase 2 README](./phase2/README.md) contains protocol details and arti
 
 1. Run B2 for the same five orders with the B0 fixed data, training settings, and order/seed assignments.
 2. Run B3's documented adaptation for the same five orders and compare it with B0/B2, clearly reporting replay exposure and the candidate-logit target.
-3. Validate and aggregate only results whose protocol/data hashes match the frozen current protocol.
-4. Continue B4–B8 implementation and execution, then assess whether the Phase 2 checkpoint is met.
+3. Run B4's GCR-style adaptation for the same five orders, reporting the additional gradient-selection compute and method deviations.
+4. Validate and aggregate only results whose protocol/data hashes match the frozen current protocol.
+5. Continue B5–B8 implementation and execution, then assess whether the Phase 2 checkpoint is met.
 
 ## Key references
 
@@ -55,6 +57,7 @@ The root [Phase 2 README](./phase2/README.md) contains protocol details and arti
 - [Phase 1 results index](./phase1/results/README.md)
 - [Phase 2 README and run instructions](./phase2/README.md)
 - [Phase 2 protocol configuration](./phase2/configs/pilot_protocol.json)
-- [B0/B1/B2/B3 runner](./phase2/run_baseline.py)
+- [B0-B4 runner](./phase2/run_baseline.py)
 - [Executed B0 Kaggle notebook](./phase2/notebooks/phase2_b0_kaggle_executed.ipynb)
 - [B2 Kaggle notebook](./phase2/notebooks/phase2_b2_kaggle.ipynb)
+- [B4 Colab notebook](./phase2/notebooks/phase2_b4_colab.ipynb)

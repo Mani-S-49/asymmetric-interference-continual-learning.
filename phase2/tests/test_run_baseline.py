@@ -15,6 +15,7 @@ from phase2.run_baseline import (
     _run_b0,
     _run_b2,
     _run_b3,
+    _run_b4,
     _run_b1,
     format_xnli_row,
     run_baseline,
@@ -375,6 +376,97 @@ def test_b3_runner_writes_derpp_metadata_and_complete_matrix(
     assert record["metadata"]["derpp_beta"] == 0.5
     assert record["metadata"]["replay_examples_per_current_example"] == 1
     assert len(record["metadata"]["replay_stages"]) == 5
+    assert (tmp_path / "results" / f"{run['run_id']}.json").is_file()
+
+
+def test_b4_runner_smoke_records_gradient_replay_metadata(
+    monkeypatch, tmp_path
+):
+    import torch
+    import transformers
+
+    monkeypatch.setattr(transformers, "set_seed", lambda seed: None)
+    protocol = load_protocol(PROTOCOL_PATH)
+    protocol["dataset"]["train_examples_per_language"] = 4
+    protocol["dataset"]["test_examples_per_language"] = 2
+    protocol["replay"]["buffer_capacity_examples"] = 1
+    manifest = build_manifest(protocol)
+    run = next(
+        item for item in manifest["runs"]
+        if item["method_id"] == "B4" and item["order_id"] == "order-1"
+    )
+    train_sets = {
+        language: [
+            {"prompt": "p", "target": "t", "label": index % 3}
+            for index in range(2)
+        ]
+        for language in protocol["dataset"]["languages"]
+    }
+    test_sets = {
+        language: [{"label": 0}]
+        for language in protocol["dataset"]["languages"]
+    }
+
+    class TinyModel(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.lora_A = torch.nn.Parameter(torch.arange(16).reshape(4, 4) / 10)
+            self.learned = []
+
+        def forward(self, input_ids, attention_mask):
+            features = torch.nn.functional.one_hot(input_ids % 4, num_classes=4).float()
+            return type("Output", (), {"logits": features @ self.lora_A})()
+
+    class TinyTrainer:
+        model_name = "tiny-test"
+        seed = 42
+
+        def __init__(self, checkpoint_dir):
+            self.model = TinyModel()
+            self.tokenizer = object()
+            self.output_dir = checkpoint_dir
+
+        def load_model_and_tokenizer(self):
+            return None
+
+        def prepare_dataset(self, dataset):
+            return [
+                {
+                    "input_ids": [1, 2, 3],
+                    "attention_mask": [1, 1, 1],
+                    "labels": [-100, 2, int(row["label"])],
+                }
+                for row in dataset
+            ]
+
+        def train_stage(self, dataset, stage_name):
+            self.model.learned.append(stage_name)
+            return {"output_dir": stage_name, "train_metrics": {"loss": 1.0}}
+
+    record = _run_b4(
+        protocol,
+        manifest,
+        run,
+        train_sets,
+        test_sets,
+        tmp_path,
+        "test-token",
+        lambda protocol, seed, checkpoint_dir, token: TinyTrainer(checkpoint_dir),
+        _fake_evaluator,
+        None,
+        None,
+    )
+
+    assert record["evaluation_mode"] == "sequential"
+    assert record["metadata"]["gradient_sketch_dimension"] == 256
+    assert record["metadata"]["gradient_candidate_fraction"] == 1.0
+    assert record["metadata"]["replay_examples_per_current_example"] == 1
+    stages = record["metadata"]["replay_stages"]
+    assert len(stages) == 5
+    assert [stage["gradient_backward_passes"] for stage in stages] == [2] * 5
+    assert [stage["replay_examples"] for stage in stages] == [0, 2, 2, 2, 2]
+    assert all(stage["buffer_size_after_stage"] <= 1 for stage in stages)
+    assert "not been reproduced" in record["metadata"]["method_deviation"]
     assert (tmp_path / "results" / f"{run['run_id']}.json").is_file()
 
 
