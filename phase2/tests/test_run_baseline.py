@@ -14,6 +14,7 @@ from phase2.run_baseline import (
     _prepare_b2_stage_datasets,
     _run_b0,
     _run_b2,
+    _run_b3,
     _run_b1,
     format_xnli_row,
     run_baseline,
@@ -310,6 +311,70 @@ def test_b2_runner_writes_matrix_and_replay_metadata(monkeypatch, tmp_path):
         0, 4, 4, 4, 4
     ]
     assert stage_lengths == [4, 8, 8, 8, 8]
+    assert (tmp_path / "results" / f"{run['run_id']}.json").is_file()
+
+
+def test_b3_runner_writes_derpp_metadata_and_complete_matrix(
+    monkeypatch, tmp_path
+):
+    import transformers
+    import phase2.derpp
+
+    monkeypatch.setattr(transformers, "set_seed", lambda seed: None)
+    protocol = load_protocol(PROTOCOL_PATH)
+    manifest = build_manifest(protocol)
+    run = next(
+        item for item in manifest["runs"]
+        if item["method_id"] == "B3" and item["order_id"] == "order-1"
+    )
+    train_sets = {
+        language: [{"prompt": "p", "target": " entailment"}]
+        for language in protocol["dataset"]["languages"]
+    }
+    test_sets = {
+        language: [{"label": 0}]
+        for language in protocol["dataset"]["languages"]
+    }
+
+    class _FakeDERPP:
+        def __init__(self, base_trainer, **kwargs):
+            self.model = base_trainer.model
+            self.tokenizer = base_trainer.tokenizer
+            self.replay_stages = []
+
+        def load_model_and_tokenizer(self):
+            return None
+
+        def train_stage(self, dataset, stage_name):
+            self.model.learned.append(stage_name)
+            self.replay_stages.append({
+                "stage_index": len(self.replay_stages),
+                "replay_examples": 0,
+            })
+            return {"output_dir": stage_name}
+
+    monkeypatch.setattr(phase2.derpp, "DERPPTrainer", _FakeDERPP)
+    record = _run_b3(
+        protocol,
+        manifest,
+        run,
+        train_sets,
+        test_sets,
+        tmp_path,
+        "test-token",
+        _fake_trainer_factory,
+        _fake_evaluator,
+        None,
+        None,
+    )
+
+    assert record["evaluation_mode"] == "sequential"
+    assert len(record["performance_matrix"]) == 5
+    assert all(len(row) == 5 for row in record["performance_matrix"])
+    assert record["metadata"]["derpp_alpha"] == 0.5
+    assert record["metadata"]["derpp_beta"] == 0.5
+    assert record["metadata"]["replay_examples_per_current_example"] == 1
+    assert len(record["metadata"]["replay_stages"]) == 5
     assert (tmp_path / "results" / f"{run['run_id']}.json").is_file()
 
 

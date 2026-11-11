@@ -41,7 +41,7 @@ METHOD_METADATA = {
         "id": "B3",
         "name": "derpp",
         "runtime": "kaggle-2",
-        "status": "adaptation_required",
+        "status": "implemented_reference_runner",
     },
     "B4": {
         "id": "B4",
