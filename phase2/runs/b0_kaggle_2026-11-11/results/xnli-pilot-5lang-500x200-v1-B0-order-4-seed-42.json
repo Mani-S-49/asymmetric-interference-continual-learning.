@@ -1,0 +1,127 @@
+{
+  "completed": true,
+  "data_manifest_sha256": "e459305688bf0ff5db4f744cee773ef2c0bb55c52df4bf71a7980479e58301a4",
+  "evaluation_mode": "sequential",
+  "final_accuracy_by_language": {
+    "de": 0.595,
+    "en": 0.665,
+    "es": 0.56,
+    "hi": 0.565,
+    "sw": 0.485
+  },
+  "metadata": {
+    "cuda_available": true,
+    "cuda_device": "Tesla T4",
+    "lora": {
+      "alpha": 32,
+      "dropout": 0.05,
+      "rank": 16,
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj"
+      ]
+    },
+    "method_deviation": "None; sequential no-replay baseline.",
+    "method_id": "B0",
+    "model_id": "meta-llama/Llama-3.2-1B",
+    "order_id": "order-4",
+    "package_versions": {
+      "accelerate": "1.15.0",
+      "bitsandbytes": "0.50.2",
+      "datasets": "5.0.1",
+      "peft": "0.21.2",
+      "torch": "2.11.0+cu130",
+      "transformers": "5.18.0"
+    },
+    "protocol_sha256": "666044368518b0422705eab44e98a375650c60286ff8e560a7a24ab1944c0a3d",
+    "source_revision": "f38890fdce491fe3435e8d38fee89556711b030d",
+    "task_order": [
+      "es",
+      "en",
+      "sw",
+      "hi",
+      "de"
+    ],
+    "training": {
+      "epochs": 1,
+      "gradient_accumulation_steps": 8,
+      "gradient_checkpointing": true,
+      "learning_rate": 0.0002,
+      "load_in_4bit": true,
+      "max_length": 512,
+      "seeds": [
+        42
+      ],
+      "train_batch_size": 1
+    },
+    "training_seed": 42
+  },
+  "method_id": "B0",
+  "metrics": {
+    "AA": 0.5740000000000001,
+    "ACC": 0.5740000000000001,
+    "BWT": 0.11249999999999999,
+    "F": -0.09,
+    "FP": 0.5740000000000001,
+    "FWT": 0.09500000000000001
+  },
+  "order_id": "order-4",
+  "performance_matrix": [
+    [
+      0.405,
+      0.405,
+      0.315,
+      0.375,
+      0.325
+    ],
+    [
+      0.465,
+      0.55,
+      0.355,
+      0.52,
+      0.45
+    ],
+    [
+      0.465,
+      0.47,
+      0.375,
+      0.465,
+      0.385
+    ],
+    [
+      0.49,
+      0.555,
+      0.35,
+      0.495,
+      0.455
+    ],
+    [
+      0.56,
+      0.665,
+      0.485,
+      0.565,
+      0.595
+    ]
+  ],
+  "protocol_id": "xnli-pilot-5lang-500x200-v1",
+  "protocol_sha256": "666044368518b0422705eab44e98a375650c60286ff8e560a7a24ab1944c0a3d",
+  "run_id": "xnli-pilot-5lang-500x200-v1-B0-order-4-seed-42",
+  "schema_version": 1,
+  "task_order": [
+    "es",
+    "en",
+    "sw",
+    "hi",
+    "de"
+  ],
+  "training_seed": 42,
+  "zero_shot_accuracy": [
+    0.365,
+    0.32,
+    0.315,
+    0.35,
+    0.315
+  ]
+}

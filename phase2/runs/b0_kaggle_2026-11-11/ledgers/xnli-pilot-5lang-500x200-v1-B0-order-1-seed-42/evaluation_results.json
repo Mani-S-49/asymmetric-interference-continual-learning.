@@ -1,0 +1,741 @@
+{
+  "schema_version": 1,
+  "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+  "task_order": [
+    "en",
+    "hi",
+    "es",
+    "de",
+    "sw"
+  ],
+  "run_metadata": {
+    "method_id": "B0",
+    "source_revision": "f38890fdce491fe3435e8d38fee89556711b030d",
+    "model_id": "meta-llama/Llama-3.2-1B",
+    "training": {
+      "learning_rate": 0.0002,
+      "epochs": 1,
+      "train_batch_size": 1,
+      "gradient_accumulation_steps": 8,
+      "max_length": 512,
+      "load_in_4bit": true,
+      "gradient_checkpointing": true,
+      "seeds": [
+        42
+      ]
+    },
+    "lora": {
+      "rank": 16,
+      "alpha": 32,
+      "dropout": 0.05,
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj"
+      ]
+    },
+    "package_versions": {
+      "torch": "2.11.0+cu130",
+      "transformers": "5.18.0",
+      "datasets": "5.0.1",
+      "peft": "0.21.2",
+      "accelerate": "1.15.0",
+      "bitsandbytes": "0.50.2"
+    },
+    "cuda_available": true,
+    "cuda_device": "Tesla T4",
+    "protocol_sha256": "666044368518b0422705eab44e98a375650c60286ff8e560a7a24ab1944c0a3d",
+    "order_id": "order-1",
+    "task_order": [
+      "en",
+      "hi",
+      "es",
+      "de",
+      "sw"
+    ],
+    "training_seed": 42,
+    "method_deviation": "None; sequential no-replay baseline.",
+    "dataset": "facebook/xnli",
+    "task": "xnli",
+    "model": "meta-llama/Llama-3.2-1B",
+    "seed": 42
+  },
+  "zero_shot_baseline_name": "pretrained_zero_shot",
+  "baselines": {
+    "en": {
+      "pretrained_zero_shot": {
+        "record_type": "baseline",
+        "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+        "stage_index": null,
+        "trained_task": null,
+        "evaluated_task": "en",
+        "language": "en",
+        "task": "xnli",
+        "split": "test",
+        "dataset": "facebook/xnli",
+        "accuracy": 0.32,
+        "num_examples": 200,
+        "baseline_name": "pretrained_zero_shot",
+        "timestamp_utc": "2026-11-11T04:49:35.385544+00:00",
+        "metadata": {}
+      }
+    },
+    "hi": {
+      "pretrained_zero_shot": {
+        "record_type": "baseline",
+        "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+        "stage_index": null,
+        "trained_task": null,
+        "evaluated_task": "hi",
+        "language": "hi",
+        "task": "xnli",
+        "split": "test",
+        "dataset": "facebook/xnli",
+        "accuracy": 0.35,
+        "num_examples": 200,
+        "baseline_name": "pretrained_zero_shot",
+        "timestamp_utc": "2026-11-11T04:50:53.166593+00:00",
+        "metadata": {}
+      }
+    },
+    "es": {
+      "pretrained_zero_shot": {
+        "record_type": "baseline",
+        "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+        "stage_index": null,
+        "trained_task": null,
+        "evaluated_task": "es",
+        "language": "es",
+        "task": "xnli",
+        "split": "test",
+        "dataset": "facebook/xnli",
+        "accuracy": 0.365,
+        "num_examples": 200,
+        "baseline_name": "pretrained_zero_shot",
+        "timestamp_utc": "2026-11-11T04:51:50.643446+00:00",
+        "metadata": {}
+      }
+    },
+    "de": {
+      "pretrained_zero_shot": {
+        "record_type": "baseline",
+        "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+        "stage_index": null,
+        "trained_task": null,
+        "evaluated_task": "de",
+        "language": "de",
+        "task": "xnli",
+        "split": "test",
+        "dataset": "facebook/xnli",
+        "accuracy": 0.315,
+        "num_examples": 200,
+        "baseline_name": "pretrained_zero_shot",
+        "timestamp_utc": "2026-11-11T04:52:50.585480+00:00",
+        "metadata": {}
+      }
+    },
+    "sw": {
+      "pretrained_zero_shot": {
+        "record_type": "baseline",
+        "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+        "stage_index": null,
+        "trained_task": null,
+        "evaluated_task": "sw",
+        "language": "sw",
+        "task": "xnli",
+        "split": "test",
+        "dataset": "facebook/xnli",
+        "accuracy": 0.315,
+        "num_examples": 200,
+        "baseline_name": "pretrained_zero_shot",
+        "timestamp_utc": "2026-11-11T04:53:57.191732+00:00",
+        "metadata": {}
+      }
+    }
+  },
+  "evaluations": [
+    {
+      "record_type": "baseline",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": null,
+      "trained_task": null,
+      "evaluated_task": "en",
+      "language": "en",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.32,
+      "num_examples": 200,
+      "baseline_name": "pretrained_zero_shot",
+      "timestamp_utc": "2026-11-11T04:49:35.385544+00:00",
+      "metadata": {}
+    },
+    {
+      "record_type": "baseline",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": null,
+      "trained_task": null,
+      "evaluated_task": "hi",
+      "language": "hi",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.35,
+      "num_examples": 200,
+      "baseline_name": "pretrained_zero_shot",
+      "timestamp_utc": "2026-11-11T04:50:53.166593+00:00",
+      "metadata": {}
+    },
+    {
+      "record_type": "baseline",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": null,
+      "trained_task": null,
+      "evaluated_task": "es",
+      "language": "es",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.365,
+      "num_examples": 200,
+      "baseline_name": "pretrained_zero_shot",
+      "timestamp_utc": "2026-11-11T04:51:50.643446+00:00",
+      "metadata": {}
+    },
+    {
+      "record_type": "baseline",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": null,
+      "trained_task": null,
+      "evaluated_task": "de",
+      "language": "de",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.315,
+      "num_examples": 200,
+      "baseline_name": "pretrained_zero_shot",
+      "timestamp_utc": "2026-11-11T04:52:50.585480+00:00",
+      "metadata": {}
+    },
+    {
+      "record_type": "baseline",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": null,
+      "trained_task": null,
+      "evaluated_task": "sw",
+      "language": "sw",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.315,
+      "num_examples": 200,
+      "baseline_name": "pretrained_zero_shot",
+      "timestamp_utc": "2026-11-11T04:53:57.191732+00:00",
+      "metadata": {}
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 0,
+      "trained_task": "en",
+      "evaluated_task": "en",
+      "language": "en",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.5,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T04:57:13.472058+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_00_en"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 0,
+      "trained_task": "en",
+      "evaluated_task": "hi",
+      "language": "hi",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.4,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T04:58:34.541607+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_00_en"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 0,
+      "trained_task": "en",
+      "evaluated_task": "es",
+      "language": "es",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.425,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T04:59:32.045867+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_00_en"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 0,
+      "trained_task": "en",
+      "evaluated_task": "de",
+      "language": "de",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.38,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:00:32.172550+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_00_en"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 0,
+      "trained_task": "en",
+      "evaluated_task": "sw",
+      "language": "sw",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.32,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:01:38.867705+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_00_en"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 1,
+      "trained_task": "hi",
+      "evaluated_task": "en",
+      "language": "en",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.545,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:06:48.828942+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_01_hi"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 1,
+      "trained_task": "hi",
+      "evaluated_task": "hi",
+      "language": "hi",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.465,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:08:09.824290+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_01_hi"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 1,
+      "trained_task": "hi",
+      "evaluated_task": "es",
+      "language": "es",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.46,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:09:07.188767+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_01_hi"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 1,
+      "trained_task": "hi",
+      "evaluated_task": "de",
+      "language": "de",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.41,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:10:07.153825+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_01_hi"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 1,
+      "trained_task": "hi",
+      "evaluated_task": "sw",
+      "language": "sw",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.315,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:11:14.030728+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_01_hi"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 2,
+      "trained_task": "es",
+      "evaluated_task": "en",
+      "language": "en",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.585,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:14:54.962614+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_02_es"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 2,
+      "trained_task": "es",
+      "evaluated_task": "hi",
+      "language": "hi",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.495,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:16:15.959756+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_02_es"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 2,
+      "trained_task": "es",
+      "evaluated_task": "es",
+      "language": "es",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.51,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:17:13.262633+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_02_es"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 2,
+      "trained_task": "es",
+      "evaluated_task": "de",
+      "language": "de",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.435,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:18:13.385021+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_02_es"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 2,
+      "trained_task": "es",
+      "evaluated_task": "sw",
+      "language": "sw",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.35,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:19:20.086806+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_02_es"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 3,
+      "trained_task": "de",
+      "evaluated_task": "en",
+      "language": "en",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.6,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:23:07.318650+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_03_de"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 3,
+      "trained_task": "de",
+      "evaluated_task": "hi",
+      "language": "hi",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.515,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:24:28.232004+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_03_de"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 3,
+      "trained_task": "de",
+      "evaluated_task": "es",
+      "language": "es",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.525,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:25:25.735157+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_03_de"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 3,
+      "trained_task": "de",
+      "evaluated_task": "de",
+      "language": "de",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.48,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:26:25.540951+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_03_de"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 3,
+      "trained_task": "de",
+      "evaluated_task": "sw",
+      "language": "sw",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.37,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:27:32.486882+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_03_de"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 4,
+      "trained_task": "sw",
+      "evaluated_task": "en",
+      "language": "en",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.535,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:31:30.840163+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_04_sw"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 4,
+      "trained_task": "sw",
+      "evaluated_task": "hi",
+      "language": "hi",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.595,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:32:52.244038+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_04_sw"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 4,
+      "trained_task": "sw",
+      "evaluated_task": "es",
+      "language": "es",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.52,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:33:49.527493+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_04_sw"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 4,
+      "trained_task": "sw",
+      "evaluated_task": "de",
+      "language": "de",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.495,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:34:49.501216+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_04_sw"
+      }
+    },
+    {
+      "record_type": "evaluation",
+      "experiment_id": "xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42",
+      "stage_index": 4,
+      "trained_task": "sw",
+      "evaluated_task": "sw",
+      "language": "sw",
+      "task": "xnli",
+      "split": "test",
+      "dataset": "facebook/xnli",
+      "accuracy": 0.415,
+      "num_examples": 200,
+      "baseline_name": null,
+      "timestamp_utc": "2026-11-11T05:35:56.498039+00:00",
+      "metadata": {
+        "checkpoint": "/kaggle/working/phase2_artifacts/checkpoints/xnli-pilot-5lang-500x200-v1-B0-order-1-seed-42/stage_04_sw"
+      }
+    }
+  ],
+  "performance_matrix": [
+    [
+      0.5,
+      0.4,
+      0.425,
+      0.38,
+      0.32
+    ],
+    [
+      0.545,
+      0.465,
+      0.46,
+      0.41,
+      0.315
+    ],
+    [
+      0.585,
+      0.495,
+      0.51,
+      0.435,
+      0.35
+    ],
+    [
+      0.6,
+      0.515,
+      0.525,
+      0.48,
+      0.37
+    ],
+    [
+      0.535,
+      0.595,
+      0.52,
+      0.495,
+      0.415
+    ]
+  ],
+  "baseline_accuracies": [
+    0.32,
+    0.35,
+    0.365,
+    0.315,
+    0.315
+  ],
+  "metrics": {
+    "ACC": 0.512,
+    "AA": 0.512,
+    "BWT": 0.0475,
+    "FWT": 0.08000000000000002,
+    "F": -0.0062500000000000056,
+    "FP": 0.512
+  }
+}
