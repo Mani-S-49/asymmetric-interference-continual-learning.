@@ -10,11 +10,11 @@ BASELINE_ORDER = tuple(f"B{index}" for index in range(9))
 RUNTIME_ASSIGNMENTS = {
     "kaggle-1": ("B0", "B1"),
     "kaggle-2": ("B2", "B3"),
+    "kaggle-3": ("B5",),
     "colab-1": ("B4",),
-    "colab-2": ("B5",),
-    "colab-3": ("B6",),
-    "colab-4": ("B7",),
-    "colab-5": ("B8",),
+    "colab-2": ("B6",),
+    "colab-3": ("B7",),
+    "colab-4": ("B8",),
 }
 
 METHOD_METADATA = {
@@ -52,25 +52,25 @@ METHOD_METADATA = {
     "B5": {
         "id": "B5",
         "name": "embedding_similarity_replay",
-        "runtime": "colab-2",
-        "status": "selector_runner_required",
+        "runtime": "kaggle-3",
+        "status": "implemented_reference_runner",
     },
     "B6": {
         "id": "B6",
         "name": "lr_adjust",
-        "runtime": "colab-3",
+        "runtime": "colab-2",
         "status": "adaptation_required",
     },
     "B7": {
         "id": "B7",
         "name": "compass",
-        "runtime": "colab-4",
+        "runtime": "colab-3",
         "status": "external_code_check_required",
     },
     "B8": {
         "id": "B8",
         "name": "function_vector_training",
-        "runtime": "colab-5",
+        "runtime": "colab-4",
         "status": "external_code_check_required",
     },
 }

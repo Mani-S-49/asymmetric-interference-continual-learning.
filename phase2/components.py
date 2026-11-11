@@ -97,25 +97,54 @@ class EmbeddingSimilaritySelector:
         query_vector: Sequence[float],
         count: int,
     ) -> list[T]:
+        return EmbeddingSimilaritySelector.select_many(
+            items, vectors, [query_vector], count
+        )[0]
+
+    @staticmethod
+    def select_many(
+        items: Sequence[T],
+        vectors: Sequence[Sequence[float]],
+        query_vectors: Sequence[Sequence[float]],
+        count: int,
+    ) -> list[list[T]]:
+        import numpy as np
+
         _validate_count(count, len(items))
-        if len(vectors) != len(items) or not query_vector:
-            raise ValueError("Provide one vector per item and a non-empty query vector.")
-        query_norm = math.sqrt(sum(float(value) ** 2 for value in query_vector))
-        if query_norm == 0:
-            raise ValueError("query_vector cannot be all zeros.")
-        scored = []
-        for index, vector in enumerate(vectors):
-            if len(vector) != len(query_vector):
-                raise ValueError("All candidate vectors must match query dimensions.")
-            vector_norm = math.sqrt(sum(float(value) ** 2 for value in vector))
-            if vector_norm == 0:
-                similarity = 0.0
-            else:
-                dot = sum(float(left) * float(right) for left, right in zip(vector, query_vector))
-                similarity = dot / (vector_norm * query_norm)
-            scored.append((similarity, index))
-        selected = sorted(scored, key=lambda pair: (-pair[0], pair[1]))[:count]
-        return [items[index] for _, index in selected]
+        if len(vectors) != len(items) or len(query_vectors) == 0:
+            raise ValueError(
+                "Provide one vector per item and at least one query vector."
+            )
+        candidate_matrix = np.asarray(vectors, dtype=np.float64)
+        query_matrix = np.asarray(query_vectors, dtype=np.float64)
+        if (
+            candidate_matrix.ndim != 2
+            or query_matrix.ndim != 2
+            or candidate_matrix.shape[1] == 0
+            or query_matrix.shape[1] != candidate_matrix.shape[1]
+        ):
+            raise ValueError("Candidate and query vectors must have matching dimensions.")
+        if not np.isfinite(candidate_matrix).all() or not np.isfinite(query_matrix).all():
+            raise ValueError("Candidate and query vectors must contain finite values.")
+        query_norms = np.linalg.norm(query_matrix, axis=1)
+        if np.any(query_norms == 0):
+            raise ValueError("query_vectors cannot contain an all-zero vector.")
+        candidate_norms = np.linalg.norm(candidate_matrix, axis=1)
+        normalized_candidates = np.divide(
+            candidate_matrix,
+            candidate_norms[:, None],
+            out=np.zeros_like(candidate_matrix),
+            where=candidate_norms[:, None] != 0,
+        )
+        normalized_queries = query_matrix / query_norms[:, None]
+        similarities = normalized_queries @ normalized_candidates.T
+        selected_indices = np.argsort(
+            -similarities, axis=1, kind="stable"
+        )[:, :count]
+        return [
+            [items[int(index)] for index in row]
+            for row in selected_indices
+        ]
 
 
 class GradientCoresetSelector:

@@ -20,7 +20,9 @@ def test_baseline_registry_matches_protocol_methods():
 
     assert set(registry) == set(BASELINE_ORDER)
     assert registry["B0"]["name"] == "sequential_no_replay"
-    assert registry["B7"]["runtime"] == "colab-4"
+    assert baseline_registry()["B5"]["status"] == "implemented_reference_runner"
+    assert registry["B5"]["runtime"] == "kaggle-3"
+    assert registry["B7"]["runtime"] == "colab-3"
 
 
 def test_runtime_jobs_partition_every_baseline_once():

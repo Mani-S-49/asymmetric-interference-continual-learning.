@@ -41,6 +41,17 @@ def test_embedding_selector_uses_cosine_similarity():
     assert EmbeddingSimilaritySelector.select(items, vectors, [1, 0], 1) == ["aligned"]
 
 
+def test_embedding_selector_handles_multiple_queries():
+    selected = EmbeddingSimilaritySelector.select_many(
+        ["right", "up", "left"],
+        [[1, 0], [0, 1], [-1, 0]],
+        [[0.9, 0.1], [-0.1, 0.9]],
+        count=2,
+    )
+
+    assert selected == [["right", "up"], ["up", "left"]]
+
+
 def test_gradient_coreset_selector_herds_toward_mean():
     items = ["left", "middle", "right"]
     vectors = [[-1.0], [0.0], [1.0]]
@@ -71,7 +82,7 @@ def test_all_manifest_runs_are_assigned_once():
 
     assert summary["total_runs"] == 41
     assert set(assignments) == {
-        "kaggle-1", "kaggle-2", "colab-1", "colab-2", "colab-3", "colab-4", "colab-5"
+        "kaggle-1", "kaggle-2", "kaggle-3", "colab-1", "colab-2", "colab-3", "colab-4"
     }
     assert sum(len(runs) for runs in assignments.values()) == 41
 

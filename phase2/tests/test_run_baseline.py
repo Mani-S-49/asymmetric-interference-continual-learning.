@@ -16,6 +16,7 @@ from phase2.run_baseline import (
     _run_b2,
     _run_b3,
     _run_b4,
+    _run_b5,
     _run_b1,
     format_xnli_row,
     run_baseline,
@@ -165,6 +166,9 @@ def test_run_baseline_skips_a_valid_completed_run_without_gpu(
 
 
 class _FakeTrainer:
+    model_name = "fake-test-model"
+    seed = 42
+
     def __init__(self):
         self.model = type("FakeModel", (), {"learned": []})()
         self.tokenizer = object()
@@ -468,6 +472,97 @@ def test_b4_runner_smoke_records_gradient_replay_metadata(
     assert all(stage["buffer_size_after_stage"] <= 1 for stage in stages)
     assert "not been reproduced" in record["metadata"]["method_deviation"]
     assert (tmp_path / "results" / f"{run['run_id']}.json").is_file()
+
+
+def test_b5_runner_writes_similarity_replay_metadata_and_complete_matrix(
+    monkeypatch, tmp_path
+):
+    import transformers
+    import phase2.similarity
+
+    monkeypatch.setattr(transformers, "set_seed", lambda seed: None)
+    monkeypatch.setattr(
+        phase2.similarity.EmbeddingSimilarityReplayTrainer,
+        "_encode",
+        lambda self, examples: [(1.0, 0.0) for _ in examples],
+    )
+    protocol = load_protocol(PROTOCOL_PATH)
+    protocol["dataset"]["train_examples_per_language"] = 4
+    protocol["dataset"]["test_examples_per_language"] = 2
+    protocol["replay"]["buffer_capacity_examples"] = 1
+    manifest = build_manifest(protocol)
+    run = next(
+        item for item in manifest["runs"]
+        if item["method_id"] == "B5" and item["order_id"] == "order-1"
+    )
+    train_sets = {
+        language: [
+            {"prompt": f"{language} example {index}", "target": " entailment"}
+            for index in range(4)
+        ]
+        for language in protocol["dataset"]["languages"]
+    }
+    test_sets = {
+        language: [{"label": 0}, {"label": 1}]
+        for language in protocol["dataset"]["languages"]
+    }
+    stage_lengths = []
+
+    def trainer_factory(protocol, seed, checkpoint_dir, token):
+        class RecordingTrainer(_FakeTrainer):
+            def train_stage(self, dataset, stage_name):
+                stage_lengths.append(len(dataset))
+                return super().train_stage(dataset, stage_name)
+        return RecordingTrainer()
+
+    record = _run_b5(
+        protocol,
+        manifest,
+        run,
+        train_sets,
+        test_sets,
+        tmp_path,
+        "test-token",
+        trainer_factory,
+        _fake_evaluator,
+        None,
+        None,
+    )
+
+    metadata = record["metadata"]
+    assert record["evaluation_mode"] == "sequential"
+    assert len(record["performance_matrix"]) == 5
+    assert metadata["replay_policy"] == (
+        "frozen_base_prompt_embedding_nearest_neighbor"
+    )
+    assert metadata["replay_examples_per_current_example"] == 1
+    assert metadata["embedding_similarity"] == "cosine"
+    assert [stage["replay_examples"] for stage in metadata["replay_stages"]] == [
+        0, 4, 4, 4, 4
+    ]
+    assert stage_lengths == [4, 8, 8, 8, 8]
+    assert all(
+        stage["mean_replay_cosine_similarity"] == 1.0
+        for stage in metadata["replay_stages"][1:]
+    )
+    assert (tmp_path / "results" / f"{run['run_id']}.json").is_file()
+
+
+def test_similarity_memory_retrieves_cosine_nearest_prior_examples():
+    from phase2.similarity import EmbeddingSimilarityMemory
+
+    memory = EmbeddingSimilarityMemory(capacity=2, seed=7)
+    memory.update(
+        "en",
+        [{"prompt": "east"}, {"prompt": "north"}],
+        [[1.0, 0.0], [0.0, 1.0]],
+    )
+
+    selected, similarities = memory.select_nearest([[0.95, 0.05], [0.05, 0.95]])
+
+    assert [item.example["prompt"] for item in selected] == ["east", "north"]
+    assert all(value > 0.99 for value in similarities)
+    assert memory.seen_languages == ("en",)
 
 
 def test_b1_runner_trains_once_for_order_invariant_pool(monkeypatch, tmp_path):
