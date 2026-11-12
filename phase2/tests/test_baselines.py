@@ -22,7 +22,10 @@ def test_baseline_registry_matches_protocol_methods():
     assert registry["B0"]["name"] == "sequential_no_replay"
     assert baseline_registry()["B5"]["status"] == "implemented_reference_runner"
     assert registry["B5"]["runtime"] == "kaggle-3"
-    assert registry["B7"]["runtime"] == "colab-3"
+    assert registry["B7"]["runtime"] == "kaggle-5"
+    assert registry["B6"]["status"] == "implemented_phase2_adaptation"
+    assert registry["B7"]["status"] == "implemented_phase2_adaptation"
+    assert registry["B8"]["status"] == "implemented_phase2_adaptation"
 
 
 def test_runtime_jobs_partition_every_baseline_once():

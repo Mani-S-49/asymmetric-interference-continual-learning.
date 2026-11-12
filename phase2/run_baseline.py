@@ -1,4 +1,4 @@
-"""Run the Phase 2 B0-B5 XNLI baseline jobs."""
+"""Run the Phase 2 B0-B8 XNLI baseline jobs."""
 
 from __future__ import annotations
 
@@ -925,6 +925,289 @@ def _run_b5(
     return record
 
 
+def _run_stagewise_adaptation(
+    *,
+    method_id: str,
+    protocol: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+    run: Mapping[str, Any],
+    train_sets: Mapping[str, Any],
+    test_sets: Mapping[str, Any],
+    output_root: Path,
+    token: str | bool,
+    trainer_factory: TrainerFactory,
+    evaluator: AccuracyEvaluator | None,
+    wandb_project: str | None,
+    wandb_entity: str | None,
+    adapter_factory: Callable[[Any], Any],
+    method_metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    import gc
+    import torch
+    from shared.continual_learning_lora import run_sequential_experiment
+
+    results_dir = output_root / "results"
+    result_path = results_dir / f"{run['run_id']}.json"
+    if result_path.exists():
+        with result_path.open(encoding="utf-8") as source:
+            existing = json.load(source)
+        validate_result_record(existing, manifest)
+        print(f"Already completed; skipping {run['run_id']}.")
+        return existing
+
+    checkpoint_dir, ledger_dir = _create_sequential_attempt(
+        output_root, run["run_id"]
+    )
+    from transformers import set_seed
+
+    seed = run["training_seed"]
+    set_seed(seed)
+    base_trainer = trainer_factory(protocol, seed, checkpoint_dir, token)
+    trainer = adapter_factory(base_trainer)
+    trainer.load_model_and_tokenizer()
+    run_metadata = {
+        **_runtime_metadata(protocol, method_id),
+        "protocol_sha256": manifest["protocol_sha256"],
+        "order_id": run["order_id"],
+        "task_order": list(run["task_order"]),
+        "training_seed": seed,
+        "checkpoint_attempt": checkpoint_dir.name,
+        **dict(method_metadata),
+    }
+    kwargs: dict[str, Any] = {}
+    if evaluator is not None:
+        kwargs["evaluator"] = evaluator
+    if wandb_project:
+        kwargs["wandb_project"] = wandb_project
+        kwargs["wandb_entity"] = wandb_entity
+    result = run_sequential_experiment(
+        trainer,
+        task_order=run["task_order"],
+        train_datasets=train_sets,
+        test_datasets=test_sets,
+        experiment_id=run["run_id"],
+        output_dir=ledger_dir,
+        dataset_name=protocol["dataset"]["id"],
+        task_name="xnli",
+        run_metadata=run_metadata,
+        **kwargs,
+    )
+    matrix = result["ledger"].performance_matrix()
+    zero_shot = result["ledger"].baseline_accuracies()
+    if any(value is None for row in matrix for value in row) or any(
+        value is None for value in zero_shot
+    ):
+        raise RuntimeError(
+            f"{method_id} sequential experiment returned incomplete evaluations."
+        )
+    if hasattr(trainer, "replay_stages"):
+        run_metadata["replay_stages"] = trainer.replay_stages
+    if hasattr(trainer, "learning_rates"):
+        run_metadata["stage_learning_rates"] = trainer.learning_rates
+    record = make_sequential_record(
+        manifest=manifest,
+        run=run,
+        performance_matrix=matrix,
+        zero_shot_accuracy=zero_shot,
+        metadata=run_metadata,
+    )
+    write_result_record(record, results_dir, manifest)
+    del trainer
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    return record
+
+
+def _run_b6(
+    protocol: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+    run: Mapping[str, Any],
+    train_sets: Mapping[str, Any],
+    test_sets: Mapping[str, Any],
+    output_root: Path,
+    token: str | bool,
+    trainer_factory: TrainerFactory,
+    evaluator: AccuracyEvaluator | None,
+    wandb_project: str | None,
+    wandb_entity: str | None,
+) -> dict[str, Any]:
+    from phase2.lr_adjust import (
+        LR_ADJUST_GAMMA,
+        LR_ADJUST_MINIMUM_RATIO,
+        LRAdjustTrainer,
+    )
+
+    initial_rate = float(protocol["training"]["learning_rate"])
+    return _run_stagewise_adaptation(
+        method_id="B6",
+        protocol=protocol,
+        manifest=manifest,
+        run=run,
+        train_sets=train_sets,
+        test_sets=test_sets,
+        output_root=output_root,
+        token=token,
+        trainer_factory=trainer_factory,
+        evaluator=evaluator,
+        wandb_project=wandb_project,
+        wandb_entity=wandb_entity,
+        adapter_factory=lambda base: LRAdjustTrainer(
+            base,
+            gamma=LR_ADJUST_GAMMA,
+            minimum_learning_rate=initial_rate * LR_ADJUST_MINIMUM_RATIO,
+        ),
+        method_metadata={
+            "learning_rate_schedule": "max(minimum_lr, previous_lr * gamma) at each language boundary",
+            "learning_rate_initial": initial_rate,
+            "learning_rate_gamma": LR_ADJUST_GAMMA,
+            "learning_rate_minimum": initial_rate * LR_ADJUST_MINIMUM_RATIO,
+            "replay_policy": "none",
+            "method_deviation": (
+                "LR-ADJUST adaptation: decay the Phase 2 LoRA learning rate "
+                "by gamma=0.9 before each language stage, including the first, "
+                "with a floor at 10% of the configured initial rate. The "
+                "source algorithm leaves gamma and the minimum rate to the "
+                "experiment configuration; this XNLI/LoRA schedule is an "
+                "operational choice, not a reproduction of the 51-language "
+                "source experiment."
+            ),
+        },
+    )
+
+
+def _run_b7(
+    protocol: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+    run: Mapping[str, Any],
+    train_sets: Mapping[str, Any],
+    test_sets: Mapping[str, Any],
+    output_root: Path,
+    token: str | bool,
+    trainer_factory: TrainerFactory,
+    evaluator: AccuracyEvaluator | None,
+    wandb_project: str | None,
+    wandb_entity: str | None,
+) -> dict[str, Any]:
+    from phase2.compass import (
+        COMPASS_EMBEDDING_BATCH_SIZE,
+        COMPASS_REPLAY_POLICY,
+        COMPASS_REPLAY_RATIO,
+        CompassReplayTrainer,
+    )
+
+    replay_config = protocol["replay"]
+    return _run_stagewise_adaptation(
+        method_id="B7",
+        protocol=protocol,
+        manifest=manifest,
+        run=run,
+        train_sets=train_sets,
+        test_sets=test_sets,
+        output_root=output_root,
+        token=token,
+        trainer_factory=trainer_factory,
+        evaluator=evaluator,
+        wandb_project=wandb_project,
+        wandb_entity=wandb_entity,
+        adapter_factory=lambda base: CompassReplayTrainer(
+            base,
+            capacity=replay_config["buffer_capacity_examples"],
+            replay_seed=replay_config["seed"],
+            training_seed=run["training_seed"],
+        ),
+        method_metadata={
+            "replay_seed": replay_config["seed"],
+            "replay_policy": COMPASS_REPLAY_POLICY,
+            "replay_buffer_capacity_examples": replay_config[
+                "buffer_capacity_examples"
+            ],
+            "replay_examples_per_current_example": COMPASS_REPLAY_RATIO,
+            "embedding_model": "current Phase 2 pretrained Llama backbone with LoRA disabled",
+            "embedding_pooling": "attention_masked_mean_last_hidden_state",
+            "embedding_batch_size": COMPASS_EMBEDDING_BATCH_SIZE,
+            "cluster_count_rule": "min(8, round(sqrt(number_of_memory_examples)))",
+            "cluster_weighting": "current-stage cluster demand divided by prior-memory cluster supply",
+            "memory_update": "uniform reservoir after each language stage",
+            "method_deviation": (
+                "COMPASS-inspired semantic-cluster replay adaptation: embed "
+                "train prompts with the frozen pretrained backbone, cluster "
+                "the prior-language reservoir, and reweight replay examples "
+                "so the replay cluster distribution follows the incoming "
+                "training-stage proxy distribution. This XNLI/LoRA method "
+                "does not reproduce COMPASS's DoRA adapters, external usage "
+                "distribution proxy, multilingual auxiliary corpus, or full "
+                "clustering/sampling procedure."
+            ),
+        },
+    )
+
+
+def _run_b8(
+    protocol: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+    run: Mapping[str, Any],
+    train_sets: Mapping[str, Any],
+    test_sets: Mapping[str, Any],
+    output_root: Path,
+    token: str | bool,
+    trainer_factory: TrainerFactory,
+    evaluator: AccuracyEvaluator | None,
+    wandb_project: str | None,
+    wandb_entity: str | None,
+) -> dict[str, Any]:
+    from phase2.function_vector import (
+        FUNCTION_VECTOR_REGULARIZATION,
+        FUNCTION_VECTOR_REPLAY_POLICY,
+        FUNCTION_VECTOR_REPLAY_RATIO,
+        FunctionVectorReplayTrainer,
+    )
+
+    replay_config = protocol["replay"]
+    return _run_stagewise_adaptation(
+        method_id="B8",
+        protocol=protocol,
+        manifest=manifest,
+        run=run,
+        train_sets=train_sets,
+        test_sets=test_sets,
+        output_root=output_root,
+        token=token,
+        trainer_factory=trainer_factory,
+        evaluator=evaluator,
+        wandb_project=wandb_project,
+        wandb_entity=wandb_entity,
+        adapter_factory=lambda base: FunctionVectorReplayTrainer(
+            base,
+            capacity=replay_config["buffer_capacity_examples"],
+            replay_seed=replay_config["seed"],
+            training_seed=run["training_seed"],
+            regularization=FUNCTION_VECTOR_REGULARIZATION,
+        ),
+        method_metadata={
+            "replay_seed": replay_config["seed"],
+            "replay_policy": FUNCTION_VECTOR_REPLAY_POLICY,
+            "replay_buffer_capacity_examples": replay_config[
+                "buffer_capacity_examples"
+            ],
+            "replay_examples_per_current_example": FUNCTION_VECTOR_REPLAY_RATIO,
+            "function_vector_definition": "normalized mean last-prompt-token final-layer activation per language stage",
+            "function_vector_regularization": FUNCTION_VECTOR_REGULARIZATION,
+            "function_vector_loss": "current answer-token cross-entropy + coefficient * (1 - cosine similarity) on prior-language replay prompts",
+            "function_vector_source": "Jiang et al. (2025), arXiv:2502.11019",
+            "method_deviation": (
+                "Function-vector-guided replay adaptation: maintain one "
+                "activation-vector anchor per prior language, replay examples "
+                "from a 125-example uniform reservoir, and penalize cosine "
+                "drift of their final-layer prompt activations. This does not "
+                "implement the source paper's activation-patched attention "
+                "head vectors or function-vector-guided KL objective; it is a "
+                "documented Phase 2 operationalization."
+            ),
+        },
+    )
+
+
 def _run_b1(
     protocol: Mapping[str, Any],
     manifest: Mapping[str, Any],
@@ -1039,10 +1322,12 @@ def run_baseline(
     trainer_factory: TrainerFactory | None = None,
     evaluator: AccuracyEvaluator | None = None,
 ) -> list[dict[str, Any]]:
-    """Run selected B0-B5 jobs using prepared fixed XNLI data."""
-    if method_id not in {"B0", "B1", "B2", "B3", "B4", "B5"}:
+    """Run selected B0-B8 jobs using prepared fixed XNLI data."""
+    if method_id not in {
+        "B0", "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8"
+    }:
         raise ValueError(
-            "Only B0, B1, B2, B3, B4, and B5 training adapters are implemented."
+            "method_id must be one of B0 through B8."
         )
     protocol = load_protocol(protocol_path)
     prepared_manifest = validate_prepared_artifacts(protocol, artifact_root)
@@ -1164,6 +1449,48 @@ def run_baseline(
                 wandb_project,
                 wandb_entity,
             )
+        elif method_id == "B6":
+            result = _run_b6(
+                protocol,
+                run_manifest,
+                run,
+                train_sets,
+                test_sets,
+                output_root,
+                token,
+                factory,
+                evaluator,
+                wandb_project,
+                wandb_entity,
+            )
+        elif method_id == "B7":
+            result = _run_b7(
+                protocol,
+                run_manifest,
+                run,
+                train_sets,
+                test_sets,
+                output_root,
+                token,
+                factory,
+                evaluator,
+                wandb_project,
+                wandb_entity,
+            )
+        elif method_id == "B8":
+            result = _run_b8(
+                protocol,
+                run_manifest,
+                run,
+                train_sets,
+                test_sets,
+                output_root,
+                token,
+                factory,
+                evaluator,
+                wandb_project,
+                wandb_entity,
+            )
         else:
             result = _run_b5(
                 protocol,
@@ -1191,7 +1518,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--method",
-        choices=("B0", "B1", "B2", "B3", "B4", "B5"),
+        choices=("B0", "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8"),
         required=True,
     )
     parser.add_argument("--protocol", type=Path, default=default_protocol)

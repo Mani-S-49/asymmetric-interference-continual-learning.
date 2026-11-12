@@ -12,9 +12,9 @@ RUNTIME_ASSIGNMENTS = {
     "kaggle-2": ("B2", "B3"),
     "kaggle-3": ("B5",),
     "colab-1": ("B4",),
-    "colab-2": ("B6",),
-    "colab-3": ("B7",),
-    "colab-4": ("B8",),
+    "kaggle-4": ("B6",),
+    "kaggle-5": ("B7",),
+    "kaggle-6": ("B8",),
 }
 
 METHOD_METADATA = {
@@ -58,20 +58,20 @@ METHOD_METADATA = {
     "B6": {
         "id": "B6",
         "name": "lr_adjust",
-        "runtime": "colab-2",
-        "status": "adaptation_required",
+        "runtime": "kaggle-4",
+        "status": "implemented_phase2_adaptation",
     },
     "B7": {
         "id": "B7",
         "name": "compass",
-        "runtime": "colab-3",
-        "status": "external_code_check_required",
+        "runtime": "kaggle-5",
+        "status": "implemented_phase2_adaptation",
     },
     "B8": {
         "id": "B8",
         "name": "function_vector_training",
-        "runtime": "colab-4",
-        "status": "external_code_check_required",
+        "runtime": "kaggle-6",
+        "status": "implemented_phase2_adaptation",
     },
 }
 
@@ -112,6 +112,8 @@ def baseline_registry(protocol: Mapping[str, Any] | None = None) -> dict[str, di
         for method_id in BASELINE_ORDER:
             base = dict(METHOD_METADATA[method_id])
             base.update(by_id[method_id])
+            if method_id in {"B6", "B7", "B8"}:
+                base["status"] = METHOD_METADATA[method_id]["status"]
             registry[method_id] = base
         return registry
 
