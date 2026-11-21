@@ -33,6 +33,8 @@ data/
 datasets/
 .cache/
 huggingface_cache/
+phase4/prepared/
+phase4/kaggle/*.zip
 
 # Generated experiment outputs and logs
 outputs/

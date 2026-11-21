@@ -209,12 +209,7 @@ def _new_trainer(
 def _runtime_metadata(protocol: Mapping[str, Any], method_id: str) -> dict[str, Any]:
     import torch
 
-    source_revision = subprocess.run(
-        ["git", "-C", str(PROJECT_ROOT), "rev-parse", "HEAD"],
-        capture_output=True,
-        check=True,
-        text=True,
-    ).stdout.strip()
+    source_revision = _resolve_source_revision(protocol)
     packages = {}
     for package in ("torch", "transformers", "datasets", "peft", "accelerate", "bitsandbytes"):
         try:
@@ -233,6 +228,46 @@ def _runtime_metadata(protocol: Mapping[str, Any], method_id: str) -> dict[str, 
     if torch.cuda.is_available():
         metadata["cuda_device"] = torch.cuda.get_device_name(0)
     return metadata
+
+
+def _resolve_source_revision(protocol: Mapping[str, Any]) -> str:
+    source_revision = protocol.get("source_revision")
+    if not isinstance(source_revision, str) or not source_revision:
+        git_metadata = PROJECT_ROOT / ".git"
+        if git_metadata.exists():
+            source_revision = subprocess.run(
+                ["git", "-C", str(PROJECT_ROOT), "rev-parse", "HEAD"],
+                capture_output=True,
+                check=True,
+                text=True,
+            ).stdout.strip()
+        else:
+            hasher = hashlib.sha256()
+            source_files = sorted(
+                path
+                for directory in ("phase2", "phase4", "shared")
+                for path in (PROJECT_ROOT / directory).rglob("*")
+                if path.is_file()
+                and (
+                    path.suffix == ".py"
+                    or path == PROJECT_ROOT / "phase2" / "requirements-phase2.txt"
+                )
+                and "__pycache__" not in path.parts
+            )
+            if not source_files:
+                raise FileNotFoundError(
+                    "Cannot fingerprint source: no Phase 2/4 or shared source "
+                    f"files found under {PROJECT_ROOT}."
+                )
+            for path in source_files:
+                relative_path = path.relative_to(PROJECT_ROOT).as_posix().encode("utf-8")
+                payload = path.read_bytes()
+                hasher.update(len(relative_path).to_bytes(8, "big"))
+                hasher.update(relative_path)
+                hasher.update(len(payload).to_bytes(8, "big"))
+                hasher.update(payload)
+            source_revision = f"sha256:{hasher.hexdigest()}"
+    return source_revision
 
 
 def _expected_run(
@@ -1527,7 +1562,7 @@ def main() -> None:
         "--order-id",
         action="append",
         dest="order_ids",
-        help="Run only this order; repeat the flag to select multiple orders. Default: all five.",
+        help="Run only this order; repeat the flag to select multiple orders. Default: all protocol orders.",
     )
     parser.add_argument("--wandb-project")
     parser.add_argument("--wandb-entity")

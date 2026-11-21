@@ -28,11 +28,11 @@ def validate_protocol(protocol: Mapping[str, Any]) -> None:
     languages = dataset.get("languages")
     if (
         not isinstance(languages, list)
-        or len(languages) != 5
-        or len(set(languages)) != 5
+        or len(languages) < 2
+        or len(set(languages)) != len(languages)
         or any(not isinstance(language, str) or not language for language in languages)
     ):
-        raise ValueError("dataset.languages must contain five unique language codes.")
+        raise ValueError("dataset.languages must contain at least two unique language codes.")
 
     if dataset.get("id") == "facebook/xnli":
         supported = {
@@ -55,8 +55,8 @@ def validate_protocol(protocol: Mapping[str, Any]) -> None:
             raise ValueError(f"dataset.{split}_selection_seed must be an integer.")
 
     orders = protocol.get("orders")
-    if not isinstance(orders, list) or len(orders) != 5:
-        raise ValueError("protocol.orders must contain exactly five orders.")
+    if not isinstance(orders, list) or not orders:
+        raise ValueError("protocol.orders must contain at least one order.")
     order_ids = set()
     normalized_orders = []
     for order in orders:
@@ -75,7 +75,7 @@ def validate_protocol(protocol: Mapping[str, Any]) -> None:
         order_ids.add(order_id)
         normalized_orders.append(tuple(order_languages))
     if len(set(normalized_orders)) != len(normalized_orders):
-        raise ValueError("The five stream orders must be distinct.")
+        raise ValueError("Stream orders must be distinct.")
 
     replay = protocol.get("replay")
     if not isinstance(replay, Mapping):

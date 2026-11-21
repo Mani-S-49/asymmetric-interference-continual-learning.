@@ -1,7 +1,7 @@
 # Project status
 
-**Last reviewed:** 2026-11-16
-**Current focus:** Confirmatory Phase 3 RQ1 validation; the initial Kaggle comparison is organized, but it does not establish a statistically supported winning prior.
+**Last reviewed:** 2026-11-21
+**Current focus:** Phase 3 confirmatory RQ1 did not identify a winning prior. Phase 4 B0 is complete across five ten-language orders at seed 42; rescope or preregister before any prior-weighted intervention.
 
 ## At a glance
 
@@ -9,7 +9,8 @@
 |---|---|---|
 | Phase 1: harness and pilot evidence | Existing pilots complete; matched stream-order comparison pending | The Hindi → German → English 1,000/500 three-seed run is complete (pattern pass rate 0/3). Its matching English → Hindi → German template is prepared; the existing English → Hindi → German 500/200 single-seed run is separate. |
 | Phase 2: B0–B8 baselines | Pilot baseline coverage complete; source-paper reproductions remain qualified | B0, B2–B8 each have five current-protocol orders; B1 has its single order-independent run. Every selected result record validates against its matching manifest. B3 and B7 (and other described methods) are adaptations, not exact paper reproductions. |
-| Phase 3: prior comparison (RQ1) | Initial Kaggle pilot complete; confirmatory seeds prepared before selecting a prior | The run covers five B0 orders, 20 directed pairs, and 50 forgetting observations. Family mismatch has the highest raw correlation (rho 0.460), followed by URIEL+ (0.414) and embeddings (0.345), but no prior is significant after Holm correction. Grambank v1.0.3 lacks Spanish and German and is intentionally omitted. See the organized [RQ1 result folder](./phase3/results/rq1_kaggle_2026-11-16/README.md) and [confirmatory B0 notebook](./phase3/notebooks/phase3_confirmatory_b0_seeds.ipynb). |
+| Phase 3: prior comparison (RQ1) | Confirmatory checkpoint complete; primary comparison not supported | The frozen seed-43 analysis did not identify a prior that beats random. Do not present prior-weighted replay as an RQ1-supported intervention without an explicit research rescope. |
+| Phase 4: controlled-stream setup | Ten-language B0 baseline complete (5/5 orders, seed 42); prior-weighted work blocked pending rescope | Mean ACC is 0.6723 (SD 0.0140) across the five fixed orders. These are descriptive order results from one training seed, not seed-robust inference. See the [Phase 4 B0 run record](./phase4/runs/b0-controlled-xnli-10lang-v1/README.md). |
 
 Phase 1 being accepted for project progression is **not** a claim that the original checkpoint pattern was reproduced.
 

@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "protocol_id": "phase4-xnli-controlled-10lang-v1",
+  "dataset": {
+    "id": "facebook/xnli",
+    "languages": [
+      "en",
+      "de",
+      "es",
+      "fr",
+      "sw",
+      "ar",
+      "ur",
+      "bg",
+      "ru",
+      "hi"
+    ],
+    "train_examples_per_language": 500,
+    "test_examples_per_language": 200,
+    "train_selection_seed": 20261110,
+    "test_selection_seed": 20261111
+  },
+  "language_metadata": {
+    "script_by_language": {
+      "en": "Latn",
+      "de": "Latn",
+      "es": "Latn",
+      "fr": "Latn",
+      "sw": "Latn",
+      "ar": "Arab",
+      "ur": "Arab",
+      "bg": "Cyrl",
+      "ru": "Cyrl",
+      "hi": "Deva"
+    },
+    "script_groups": {
+      "Latn": ["en", "de", "es", "fr", "sw"],
+      "Arab": ["ar", "ur"],
+      "Cyrl": ["bg", "ru"],
+      "Deva": ["hi"]
+    }
+  },
+  "order_sampling": {
+    "seed": 20261119,
+    "algorithm": "random.Random.sample_without_replacement_over_itertools_permutations_in_configured_language_order",
+    "population_size": 3628800
+  },
+  "orders": [
+    {
+      "id": "order-001",
+      "languages": ["hi", "de", "ar", "bg", "ru", "fr", "sw", "ur", "en", "es"]
+    },
+    {
+      "id": "order-002",
+      "languages": ["ar", "ur", "en", "es", "hi", "bg", "fr", "ru", "sw", "de"]
+    },
+    {
+      "id": "order-003",
+      "languages": ["ru", "de", "fr", "bg", "ur", "sw", "en", "ar", "hi", "es"]
+    },
+    {
+      "id": "order-004",
+      "languages": ["ar", "hi", "ur", "bg", "sw", "de", "ru", "es", "fr", "en"]
+    },
+    {
+      "id": "order-005",
+      "languages": ["ru", "es", "fr", "ur", "sw", "en", "hi", "de", "ar", "bg"]
+    }
+  ],
+  "model": {
+    "id": "meta-llama/Llama-3.2-1B",
+    "task_mode": "causal_lm",
+    "prompt_protocol": "phase1_b0_nli_prompt_candidate_label_log_likelihood"
+  },
+  "lora": {
+    "rank": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"]
+  },
+  "training": {
+    "learning_rate": 0.0002,
+    "epochs": 1,
+    "train_batch_size": 1,
+    "gradient_accumulation_steps": 8,
+    "max_length": 512,
+    "load_in_4bit": true,
+    "gradient_checkpointing": true,
+    "seeds": [42]
+  },
+  "replay": {
+    "buffer_fraction": 0.05,
+    "buffer_capacity_examples": 250,
+    "seed": 20261112
+  },
+  "methods": [
+    {
+      "id": "B0",
+      "name": "sequential_no_replay",
+      "status": "implemented_reference_runner"
+    },
+    {
+      "id": "B1",
+      "name": "joint_multilingual",
+      "status": "implemented_reference_runner"
+    },
+    {
+      "id": "B2",
+      "name": "uniform_experience_replay",
+      "status": "buffer_ready_runner_required"
+    },
+    {
+      "id": "B3",
+      "name": "derpp",
+      "status": "adaptation_required"
+    },
+    {
+      "id": "B4",
+      "name": "gradient_coreset_replay",
+      "status": "adaptation_required"
+    },
+    {
+      "id": "B5",
+      "name": "embedding_similarity_replay",
+      "status": "selector_runner_required"
+    },
+    {
+      "id": "B6",
+      "name": "lr_adjust",
+      "status": "adaptation_required"
+    },
+    {
+      "id": "B7",
+      "name": "compass",
+      "status": "external_code_check_required"
+    },
+    {
+      "id": "B8",
+      "name": "function_vector_training",
+      "status": "external_code_check_required"
+    }
+  ],
+  "phase4": {
+    "method": {
+      "id": "M3",
+      "name": "asymmetric_interference_matrix_replay",
+      "status": "pending_phase3_gate_and_runner"
+    },
+    "replay_exposure": {
+      "fraction": 0.05,
+      "unit": "supervised_tokens",
+      "denominator": "total_current_plus_replay_supervised_tokens",
+      "replay_tokens_replace_current_language_tokens": true,
+      "match_total_token_budget_to": "B0_same_order_and_training_seed"
+    },
+    "prior": {
+      "id": "alastruey-interference-v1",
+      "matrix_orientation": "rows=incoming_source,columns=at_risk_target",
+      "polarity": "lower_means_more_forgetting",
+      "matrix_language_coverage": "pending_10_language_build",
+      "execution_gate": "Proceed only if the Phase 3 confirmatory checkpoint passes."
+    },
+    "run_design": {
+      "order_sensitive_methods": ["B0", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "M3"],
+      "order_invariant_methods": ["B1"],
+      "stream_orders": 5,
+      "training_seeds_per_order": 1,
+      "training_seed": 42,
+      "expected_run_count": 46
+    },
+    "execution_gates": [
+      "Complete the Phase 3 confirmatory RQ1 checkpoint before interpreting or claiming an RQ1-winning prior.",
+      "Build and validate ten-language prior matrices and confirm Alastruey matrix coverage for all configured languages.",
+      "Implement token-budget accounting so replay replaces current-language tokens and all methods match B0 total supervised-token exposure.",
+      "Complete the common-pilot v2 budget-controlled baseline comparison before matched-budget claims."
+    ]
+  }
+}

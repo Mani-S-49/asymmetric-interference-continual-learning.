@@ -18,6 +18,7 @@ from phase2.run_baseline import (
     _run_b4,
     _run_b5,
     _run_b1,
+    _resolve_source_revision,
     format_xnli_row,
     run_baseline,
     validate_prepared_artifacts,
@@ -36,6 +37,34 @@ def _raw_rows(count):
         }
         for index in range(count)
     ]
+
+
+def test_source_revision_uses_protocol_fingerprint_without_git(monkeypatch):
+    def fail_if_called(*args, **kwargs):
+        pytest.fail("Git should not be required for a packaged Kaggle run.")
+
+    monkeypatch.setattr("phase2.run_baseline.subprocess.run", fail_if_called)
+
+    assert _resolve_source_revision({"source_revision": "frozen-source-hash"}) == (
+        "frozen-source-hash"
+    )
+
+
+def test_source_revision_hashes_packaged_code_without_git(tmp_path, monkeypatch):
+    source_root = tmp_path
+    (source_root / "phase2").mkdir()
+    (source_root / "phase4").mkdir()
+    (source_root / "shared").mkdir()
+    source_file = source_root / "phase2" / "runner.py"
+    source_file.write_text("version = 1\n", encoding="utf-8")
+    monkeypatch.setattr("phase2.run_baseline.PROJECT_ROOT", source_root)
+
+    first_revision = _resolve_source_revision({})
+    assert first_revision.startswith("sha256:")
+    assert _resolve_source_revision({}) == first_revision
+
+    source_file.write_text("version = 2\n", encoding="utf-8")
+    assert _resolve_source_revision({}) != first_revision
 
 
 def _write_small_artifact(protocol, artifact_root):
