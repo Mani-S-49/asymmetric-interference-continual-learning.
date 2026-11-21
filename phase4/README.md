@@ -5,6 +5,7 @@
 The ten-language B0 sequential baseline is complete for orders 001–005 at
 training seed 42. The compact result records are in
 [`runs/b0-controlled-xnli-10lang-v1/`](./runs/b0-controlled-xnli-10lang-v1/README.md),
+including the [per-order forgetting matrix](./runs/b0-controlled-xnli-10lang-v1/forgetting_matrix.csv),
 and the executed order-005 notebook is in
 [`notebooks/phase4_b0_order005_executed.ipynb`](./notebooks/phase4_b0_order005_executed.ipynb).
 All five records validate against the frozen protocol and prepared-data

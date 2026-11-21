@@ -6,6 +6,8 @@ Complete: all five configured stream orders ran with training seed 42. These
 are sequential fine-tuning runs without replay (B0), using 500 training and
 200 test examples per language. Result records are stored in `results/` and
 were validated against the Phase 4 protocol and its prepared-data manifest.
+The [per-order forgetting matrix](./forgetting_matrix.csv) summarizes the
+language-level forgetting values from all five records.
 
 | Order | Task order | ACC / AA | BWT | FWT | F |
 |---|---|---:|---:|---:|---:|
@@ -20,6 +22,14 @@ These are descriptive differences across five fixed orders with one training
 seed; they do not establish seed robustness or a replay-method advantage.
 The Phase 3 confirmatory RQ1 result was negative, so these B0 runs do not
 authorize M3 as an RQ1-supported intervention.
+
+## Forgetting-matrix definition
+
+For each language except the final language in an order, forgetting is the
+maximum accuracy from that language's learning stage through the penultimate
+stage, minus its final accuracy. The final stream language is `NA` because it
+has no later training stage. Negative values are retained: they mean final
+accuracy exceeded the best accuracy observed before the final stage.
 
 ## Provenance
 
